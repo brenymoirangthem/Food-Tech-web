@@ -95,6 +95,52 @@
         .switch-text a { color: #16a34a; text-decoration: none; font-weight: 600; }
         .hidden { display: none; }
         .emergency-access { border-top: 1px solid #e5e7eb; padding-top: 20px; margin-top: 20px; }
+        @media (max-width: 768px) {
+            body {
+                padding: 15px;
+            }
+            .auth-card {
+                padding: 30px 20px;
+                border-radius: 15px;
+                max-width: 100%;
+            }
+            .logo-section h1 {
+                font-size: 24px;
+            }
+            .logo-section p {
+                font-size: 13px;
+                margin-bottom: 25px;
+            }
+            .form-section h2 {
+                font-size: 20px;
+                margin-bottom: 20px;
+            }
+            .input-group {
+                margin-bottom: 15px;
+            }
+            .input-group input,
+            .input-group select {
+                padding: 12px;
+                font-size: 16px;
+                border-radius: 10px;
+            }
+            .auth-btn {
+                padding: 12px;
+                font-size: 16px;
+                border-radius: 10px;
+                margin-bottom: 15px;
+            }
+            .switch-text {
+                font-size: 13px;
+            }
+            .switch-text a {
+                font-size: 13px;
+            }
+            .emergency-access {
+                padding-top: 15px;
+                margin-top: 15px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -142,8 +188,6 @@
                         <option value="">Select Role</option>
                         <option value="consumer">Consumer</option>
                         <option value="supplier">Supplier</option>
-                        <option value="emergency">Emergency Coordinator</option>
-                        <option value="admin">System Administrator</option>
                     </select>
                 </div>
                 <div class="input-group">

@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Offline - FoodTech Platform</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #1e8f3f, #16a34a);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            color: white;
+        }
+        .offline-container {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .offline-icon { font-size: 80px; margin-bottom: 20px; }
+        h1 { font-size: 28px; margin-bottom: 15px; }
+        .status-message { font-size: 16px; margin-bottom: 30px; opacity: 0.9; }
+        .emergency-info {
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+            text-align: left;
+        }
+        .emergency-info h3 { margin-bottom: 15px; color: #ffeb3b; }
+        .contact-list { list-style: none; }
+        .contact-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            justify-content: space-between;
+        }
+        .contact-list li:last-child { border-bottom: none; }
+        .instructions {
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+            text-align: left;
+        }
+        .instructions h3 { margin-bottom: 15px; color: #ffeb3b; }
+        .instructions ol { padding-left: 20px; }
+        .instructions li { margin-bottom: 8px; }
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn-primary { background: #fff; color: #1e8f3f; }
+        .btn-secondary { background: rgba(255,255,255,0.2); color: white; }
+        .cached-data {
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 25px;
+            text-align: left;
+        }
+        .cached-data h3 { margin-bottom: 15px; color: #4caf50; }
+        .center-item {
+            padding: 10px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        .center-name { font-weight: 600; margin-bottom: 4px; }
+        .center-details { font-size: 14px; opacity: 0.8; }
+    </style>
+</head>
+<body>
+    <div class="offline-container">
+        <div class="offline-icon">📡❌</div>
+        <h1>You're Offline</h1>
+        <p class="status-message">
+            No internet connection detected. Emergency information is still available below.
+        </p>
+
+        <div class="emergency-info">
+            <h3>🚨 Emergency Contacts</h3>
+            <ul class="contact-list">
+                <li><span>Emergency Control Room</span><span>100</span></li>
+                <li><span>Police Emergency</span><span>112</span></li>
+                <li><span>Medical Emergency</span><span>108</span></li>
+                <li><span>Fire Emergency</span><span>101</span></li>
+                <li><span>Manipur Emergency</span><span>+91 385 244 2233</span></li>
+            </ul>
+        </div>
+
+        <div class="instructions">
+            <h3>📋 Emergency Instructions</h3>
+            <ol>
+                <li>Stay calm and assess your immediate safety</li>
+                <li>Contact emergency services using numbers above</li>
+                <li>Move to the nearest safe food distribution center</li>
+                <li>Follow instructions from local authorities</li>
+                <li>Check cached food center locations below</li>
+            </ol>
+        </div>
+
+        <div class="action-buttons">
+            <button class="btn btn-primary" onclick="tryReconnect()">🔄 Try Again</button>
+            <a href="/login.html" class="btn btn-secondary">🏠 Go Home</a>
+        </div>
+
+        <div class="cached-data">
+            <h3>📍 Cached Food Centers (Works Offline)</h3>
+            <div id="cached-centers">
+                <div class="center-item">
+                    <div class="center-name">Manipur State Emergency Center</div>
+                    <div class="center-details">Secretariat Complex, Imphal</div>
+                    <div class="center-details">📞 Emergency Control Room: 100</div>
+                    <div class="center-details">Status: Active | Supplies: Emergency Rations, Water, Medical</div>
+                </div>
+                <div class="center-item">
+                    <div class="center-name">District Emergency Hub - Imphal East</div>
+                    <div class="center-details">DC Office Complex, Porompat</div>
+                    <div class="center-details">📞 +91 385 244 2233</div>
+                    <div class="center-details">Status: Active | Supplies: Food Packets, Water, First Aid</div>
+                </div>
+                <div class="center-item">
+                    <div class="center-name">Thoubal Emergency Relief</div>
+                    <div class="center-details">Thoubal District HQ</div>
+                    <div class="center-details">📞 +91 385 242 1100</div>
+                    <div class="center-details">Status: Limited | Supplies: Basic Food, Water Purification</div>
+                </div>
+            </div>
+            <p style="margin-top: 15px; font-size: 14px; color: #4caf50;">✅ This data works completely offline</p>
+        </div>
+    </div>
+
+    <script>
+        function tryReconnect() {
+            if (navigator.onLine) {
+                window.location.reload();
+            } else {
+                alert('❌ Still offline. Food centers and emergency contacts above remain available.');
+            }
+        }
+
+        // Check connection status
+        window.addEventListener('online', function() {
+            alert('✅ Connection restored! Redirecting...');
+            window.location.reload();
+        });
+
+        window.addEventListener('offline', function() {
+            console.log('Connection lost - offline mode active');
+        });
+
+        // Display connection status
+        if (navigator.onLine) {
+            document.querySelector('.status-message').innerHTML = 
+                'Connection restored! <a href="/" style="color: #ffeb3b;">Return to app</a>';
+        }
+    </script>
+</body>
+</html>

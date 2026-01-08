@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - FoodTech Platform</title>
+    <script>
+        // Inline auth for dashboard
+        window.FoodTechAuth = {
+            requireAuth() {
+                const user = localStorage.getItem('foodtech_user');
+                if (!user) {
+                    window.location.href = 'login.html';
+                    return false;
+                }
+                return true;
+            },
+            
+            getUser() {
+                const user = localStorage.getItem('foodtech_user');
+                return user ? JSON.parse(user) : null;
+            },
+            
+            redirectToDashboard() {
+                const user = this.getUser();
+                if (user) {
+                    switch(user.role) {
+                        case 'consumer': window.location.href = 'consumer.html'; break;
+                        case 'supplier': window.location.href = 'supplier.html'; break;
+                        case 'emergency': window.location.href = 'emergency.html'; break;
+                        case 'admin': window.location.href = 'consumer.html'; break;
+                        default: window.location.href = 'consumer.html';
+                    }
+                }
+            },
+            
+            logout() {
+                localStorage.removeItem('foodtech_user');
+                localStorage.removeItem('foodtech_session');
+                localStorage.removeItem('foodtech_token');
+                window.location.href = 'login.html';
+            }
+        };
+    </script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; }
+        .header { background: #1e8f3f; color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        .btn { background: #1e8f3f; color: white; padding: 15px 25px; border: none; border-radius: 8px; cursor: pointer; margin: 10px; font-size: 16px; }
+        .btn:hover { background: #16a34a; }
+        .user-info { background: #e8f5e8; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        @media (max-width: 768px) {
+            body {
+                padding: 15px;
+            }
+            .container {
+                padding: 20px;
+                max-width: 100%;
+            }
+            .header {
+                padding: 12px;
+                text-align: center;
+            }
+            .header h1 {
+                font-size: 20px;
+            }
+            .btn {
+                width: 100%;
+                margin: 8px 0;
+                padding: 12px 20px;
+                font-size: 14px;
+            }
+            .user-info {
+                padding: 12px;
+            }
+            .user-info h3 {
+                font-size: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎉 Welcome to FoodTech Platform!</h1>
+        </div>
+
+        <div class="user-info">
+            <h3>✅ Login Successful!</h3>
+            <p id="user-details">Loading user info...</p>
+            <p style="color: #666; font-size: 14px; margin-top: 10px;">Choose your dashboard below.</p>
+        </div>
+
+        <div>
+            <button class="btn" onclick="window.location.href='consumer.html'">🍽️ Consumer Dashboard</button>
+            <button class="btn" onclick="window.location.href='supplier.html'">🏪 Supplier Dashboard</button>
+            <button class="btn" onclick="window.location.href='emergency.html'">🚨 Emergency Dashboard</button>
+        </div>
+
+        <div style="margin-top: 30px;">
+            <button class="btn" onclick="logout()" style="background: #dc3545;">Logout</button>
+        </div>
+    </div>
+
+    <script>
+        // Unified authentication check
+        if (!FoodTechAuth.requireAuth()) {
+            // Will redirect to login if not authenticated
+        } else {
+            // Display user info
+            const user = FoodTechAuth.getUser();
+            document.getElementById('user-details').innerHTML = `
+                <strong>Name:</strong> ${user.name}<br>
+                <strong>Role:</strong> ${user.role}<br>
+                <strong>Email:</strong> ${user.email}
+            `;
+            
+            // Remove auto-redirect - user stays on dashboard
+            document.querySelector('.user-info p:last-child').innerHTML = 
+                '<span style="color: #0ea5e9; font-weight: bold;">Choose your dashboard below.</span>';
+        }
+
+        function logout() {
+            localStorage.removeItem('foodtech_user');
+            localStorage.removeItem('foodtech_session');
+            localStorage.removeItem('foodtech_token');
+            alert('✅ Logged out successfully');
+            window.location.href = 'login.html';
+        }
+    </script>
+</body>
+</html>

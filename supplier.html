@@ -35,7 +35,66 @@
         .requests-section h2, .alerts-section h2 { color: #333; margin-bottom: 15px; }
         @media (max-width: 768px) {
             .main-grid { grid-template-columns: 1fr; }
-            .stats-grid { grid-template-columns: 1fr; }
+            .stats-grid { grid-template-columns: 1fr; gap: 15px; }
+            .stat-card { padding: 15px; }
+            .stat-card .material-icons { font-size: 32px; }
+            .stat-card h3 { font-size: 20px; }
+            .dashboard-content { padding: 15px; }
+            .inventory-section, .requests-section, .alerts-section { 
+                padding: 15px; 
+                margin-bottom: 15px;
+            }
+            .section-header { 
+                flex-direction: column; 
+                align-items: flex-start; 
+                gap: 10px;
+            }
+            .add-btn { 
+                width: 100%; 
+                justify-content: center;
+            }
+            .inventory-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            .item-actions {
+                width: 100%;
+                justify-content: space-between;
+            }
+            .header {
+                flex-wrap: wrap;
+                gap: 10px;
+                padding: 12px 15px;
+            }
+            .header h1 {
+                font-size: 16px;
+            }
+            #spoilage-monitor {
+                max-height: 150px;
+            }
+            .btn-small {
+                padding: 8px 12px;
+                font-size: 14px;
+            }
+            .request-item,
+            .alert-item {
+                padding: 12px;
+                margin-bottom: 8px;
+            }
+            .request-item h4,
+            .alert-item h4 {
+                font-size: 14px;
+                margin-bottom: 8px;
+            }
+            .request-item p,
+            .alert-item p {
+                font-size: 12px;
+                margin-bottom: 6px;
+            }
+            #chat-list {
+                max-height: 200px;
+            }
         }
     </style>
 </head>
@@ -52,40 +111,7 @@
         </header>
 
         <div class="dashboard-content">
-            <!-- AI Predictions Section -->
-            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
-                <h2 style="margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
-                    <span class="material-icons">psychology</span>
-                    AI Predictions
-                </h2>
-                <div class="predictions-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
-                    <div class="prediction-card" style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px; backdrop-filter: blur(10px);">
-                        <h4 style="margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
-                            <span class="material-icons">trending_up</span>
-                            Demand Forecast
-                        </h4>
-                        <div id="demand-prediction" style="font-size: 24px; font-weight: bold; margin-bottom: 5px;">Loading...</div>
-                        <div id="demand-status" style="font-size: 12px; opacity: 0.9;">Analyzing patterns...</div>
-                    </div>
-                    <div class="prediction-card" style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px; backdrop-filter: blur(10px);">
-                        <h4 style="margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
-                            <span class="material-icons">warning</span>
-                            Spoilage Risk
-                        </h4>
-                        <div id="spoilage-prediction" style="font-size: 24px; font-weight: bold; margin-bottom: 5px;">Loading...</div>
-                        <div id="spoilage-status" style="font-size: 12px; opacity: 0.9;">Checking conditions...</div>
-                    </div>
-                    <div class="prediction-card" style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px; backdrop-filter: blur(10px);">
-                        <h4 style="margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
-                            <span class="material-icons">groups</span>
-                            Crowd Level
-                        </h4>
-                        <div id="crowd-prediction" style="font-size: 24px; font-weight: bold; margin-bottom: 5px;">Loading...</div>
-                        <div id="crowd-status" style="font-size: 12px; opacity: 0.9;">Estimating traffic...</div>
-                    </div>
-                </div>
-                <div id="ai-recommendations" style="margin-top: 15px; padding: 10px; background: rgba(255,255,255,0.1); border-radius: 8px; font-size: 14px;"></div>
-            </div>
+
 
             <div class="stats-grid">
                 <div class="stat-card">
@@ -125,10 +151,10 @@
 
                 <div>
                     <div class="requests-section">
-                        <h2>📱 SMS Notifications</h2>
-                        <div id="sms-notifications" style="max-height: 200px; overflow-y: auto;"></div>
+                        <h2>🌡️ Food Spoilage Monitor (IoT)</h2>
+                        <div id="spoilage-monitor" style="max-height: 200px; overflow-y: auto;"></div>
                     </div>
-
+                    
                     <div class="requests-section">
                         <h2>📝 Consumer Feedback</h2>
                         <div class="requests-list" id="feedback-container"></div>
@@ -201,8 +227,8 @@
             loadRequests();
             loadAlerts();
             updateStats();
-            loadPredictions();
-            loadSMSNotifications();
+
+            loadSpoilageMonitor();
             loadChatMessages();
         });
 
@@ -286,11 +312,15 @@
             container.innerHTML = feedback.slice(0, 5).map(item => {
                 const priorityClass = item.priority === 'urgent' ? 'alert-item' : 'request-item';
                 const priorityIcon = item.priority === 'urgent' ? '🔴' : '🟢';
+                const categoryText = item.type === 'items' ? 'Items Needed' : 
+                                   item.type === 'quality' ? 'Food Quality' : 
+                                   item.type === 'staff' ? 'Staff Behavior' : 'Supply Center Rating';
+                
                 return `<div class="${priorityClass}">
                     <h4>${priorityIcon} ${item.center}</h4>
                     <p><strong>From:</strong> ${item.user}</p>
+                    <p><strong>Category:</strong> ${categoryText}</p>
                     <p><strong>Message:</strong> ${item.message}</p>
-                    <p><strong>Priority:</strong> ${item.priority.toUpperCase()}</p>
                     <p style="font-size: 12px; color: #666; margin-top: 8px;">${new Date(item.timestamp).toLocaleString()}</p>
                     <button class="btn-small btn-update" onclick="markFeedbackRead(${item.id})" style="margin-top: 8px;">Mark as Read</button>
                 </div>`;
@@ -376,77 +406,65 @@
             document.getElementById('efficiency').textContent = efficiency + '%';
         }
 
-        // AI Predictions
-        async function loadPredictions() {
-            try {
-                const response = await fetch('/api/predict?center_id=1');
-                const data = await response.json();
-                if (data.predictions) {
-                    updatePredictionDisplay(data.predictions);
-                    displayRecommendations(data.recommendations);
+
+        
+        // Food Spoilage IoT System
+        function loadSpoilageMonitor() {
+            const container = document.getElementById('spoilage-monitor');
+            
+            // Simulate IoT sensor data
+            const sensors = [
+                {
+                    id: 'TEMP_001',
+                    location: 'Cold Storage A',
+                    temperature: 4.2,
+                    humidity: 65,
+                    status: 'normal',
+                    lastUpdate: new Date()
+                },
+                {
+                    id: 'TEMP_002', 
+                    location: 'Dry Storage B',
+                    temperature: 22.1,
+                    humidity: 45,
+                    status: 'normal',
+                    lastUpdate: new Date(Date.now() - 120000)
+                },
+                {
+                    id: 'TEMP_003',
+                    location: 'Vegetable Section',
+                    temperature: 8.7,
+                    humidity: 78,
+                    status: 'warning',
+                    lastUpdate: new Date(Date.now() - 60000)
                 }
-            } catch (error) {
-                const mockPredictions = {
-                    demand: { predicted_demand: 85, supply_shortage_risk: false },
-                    spoilage: { risk_percentage: 15, category: 'LOW' },
-                    crowd: { crowd_percentage: 45, level: 'MEDIUM', predicted_wait_time: 3.2 }
-                };
-                updatePredictionDisplay(mockPredictions);
-                displayRecommendations([
-                    { type: 'SUPPLY', priority: 'MEDIUM', message: 'Consider restocking rice and dal by evening' }
-                ]);
-            }
-        }
-
-        function updatePredictionDisplay(predictions) {
-            if (predictions.demand) {
-                document.getElementById('demand-prediction').textContent = predictions.demand.predicted_demand + ' people';
-                document.getElementById('demand-status').textContent = predictions.demand.supply_shortage_risk ? '⚠️ Restock recommended' : '✅ Supply adequate';
-            }
-            if (predictions.spoilage) {
-                document.getElementById('spoilage-prediction').textContent = predictions.spoilage.risk_percentage + '% Risk';
-                document.getElementById('spoilage-status').textContent = `${predictions.spoilage.category} risk level`;
-            }
-            if (predictions.crowd) {
-                document.getElementById('crowd-prediction').textContent = predictions.crowd.crowd_percentage + '% Capacity';
-                document.getElementById('crowd-status').textContent = `${predictions.crowd.level} crowd • ${predictions.crowd.predicted_wait_time.toFixed(1)}min wait`;
-            }
-        }
-
-        function displayRecommendations(recommendations) {
-            const container = document.getElementById('ai-recommendations');
-            if (!recommendations || recommendations.length === 0) {
-                container.innerHTML = '✅ No urgent actions needed';
-                return;
-            }
-            const recHtml = recommendations.map(rec => {
-                const icon = rec.type === 'SUPPLY' ? '📦' : rec.type === 'SPOILAGE' ? '⚠️' : '👥';
-                return `<div style="margin-bottom: 8px; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 4px;">
-                    ${icon} <strong>${rec.priority}:</strong> ${rec.message}
-                </div>`;
-            }).join('');
-            container.innerHTML = `<strong>🤖 AI Recommendations:</strong><br>${recHtml}`;
-        }
-
-        // SMS Notifications
-        function loadSMSNotifications() {
-            const container = document.getElementById('sms-notifications');
-            const mockNotifications = [
-                { type: 'shortage', message: 'Low stock alert: Rice below 20kg threshold', timestamp: new Date(Date.now() - 300000).toISOString(), status: 'sent' },
-                { type: 'emergency', message: 'Emergency SOS received from Moirang area', timestamp: new Date(Date.now() - 600000).toISOString(), status: 'sent' }
             ];
             
-            container.innerHTML = mockNotifications.map(notification => {
-                const icon = notification.type === 'emergency' ? '🚨' : '⚠️';
-                const bgColor = notification.type === 'emergency' ? '#fee2e2' : '#fef3c7';
-                const borderColor = notification.type === 'emergency' ? '#dc2626' : '#f59e0b';
-                return `<div style="background: ${bgColor}; border: 1px solid ${borderColor}; padding: 12px; border-radius: 8px; margin-bottom: 8px;">
-                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-                        ${icon} <strong>${notification.type.toUpperCase()} SMS</strong>
-                        <span style="font-size: 10px; color: #666; margin-left: auto;">${new Date(notification.timestamp).toLocaleTimeString()}</span>
+            container.innerHTML = sensors.map(sensor => {
+                const statusColor = sensor.status === 'normal' ? '#10b981' : 
+                                   sensor.status === 'warning' ? '#f59e0b' : '#ef4444';
+                const statusIcon = sensor.status === 'normal' ? '✅' : 
+                                  sensor.status === 'warning' ? '⚠️' : '🚨';
+                
+                return `<div style="background: #f8f9fa; border: 1px solid #dee2e6; border-left: 4px solid ${statusColor}; border-radius: 8px; padding: 12px; margin-bottom: 10px;">
+                    <div style="display: flex; justify-content: between; align-items: center; margin-bottom: 8px;">
+                        <strong>${statusIcon} ${sensor.location}</strong>
+                        <span style="font-size: 10px; color: #666; margin-left: auto;">ID: ${sensor.id}</span>
                     </div>
-                    <div style="font-size: 12px;">${notification.message}</div>
-                    <div style="font-size: 10px; color: #666; margin-top: 4px;">Status: ${notification.status} • Production-ready SMS integration</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 12px;">
+                        <div>
+                            <strong>🌡️ Temperature:</strong><br>
+                            ${sensor.temperature}°C
+                        </div>
+                        <div>
+                            <strong>💧 Humidity:</strong><br>
+                            ${sensor.humidity}%
+                        </div>
+                    </div>
+                    <div style="font-size: 10px; color: #666; margin-top: 8px;">
+                        Last update: ${sensor.lastUpdate.toLocaleTimeString()}
+                    </div>
+                    ${sensor.status === 'warning' ? '<div style="background: #fef3c7; color: #92400e; padding: 4px 8px; border-radius: 4px; font-size: 11px; margin-top: 8px;">⚠️ High humidity detected - check ventilation</div>' : ''}
                 </div>`;
             }).join('');
         }
@@ -496,10 +514,11 @@
             alert(`💬 Opening chat with ${consumerName}\n\nThis would open a detailed chat interface in a full implementation.`);
         }
         
-        // Auto-refresh
-        setInterval(loadSMSNotifications, 30000);
+
+        
+        // Auto-refresh spoilage monitor
+        setInterval(loadSpoilageMonitor, 30000);
         setInterval(loadChatMessages, 10000);
-        setInterval(loadPredictions, 300000);
     </script>
 </body>
 </html>

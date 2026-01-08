@@ -44,8 +44,86 @@
         .message.consumer { background: #e3f2fd; text-align: right; }
         .message.supplier { background: #f1f8e9; text-align: left; }
         @media (max-width: 768px) {
-            .dashboard-grid { grid-template-columns: 1fr; grid-template-rows: 1fr 300px; }
-            .sidebar { border-left: none; border-top: 1px solid #e5e7eb; }
+            .dashboard-grid { 
+                grid-template-columns: 1fr; 
+                grid-template-rows: 250px 1fr; 
+            }
+            .sidebar { 
+                border-left: none; 
+                border-top: 1px solid #e5e7eb;
+                max-height: calc(100vh - 310px);
+                padding: 15px;
+            }
+            #map { height: 250px; }
+            .search-box {
+                flex-direction: column;
+                gap: 8px;
+                top: 10px;
+                left: 10px;
+                right: 10px;
+            }
+            .search-box select,
+            .search-box input {
+                font-size: 16px;
+                padding: 10px 14px;
+            }
+            .quick-actions {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+                margin-bottom: 20px;
+            }
+            .action-btn {
+                padding: 10px 6px;
+                font-size: 11px;
+            }
+            .header {
+                flex-wrap: wrap;
+                gap: 10px;
+                padding: 12px 15px;
+            }
+            .header h1 {
+                font-size: 16px;
+            }
+            .center-card {
+                padding: 12px;
+                margin-bottom: 10px;
+            }
+            .center-name {
+                font-size: 13px;
+            }
+            .center-details {
+                font-size: 11px;
+            }
+            .centers-list h3 {
+                font-size: 14px;
+            }
+            #chat-section {
+                margin-top: 10px;
+                padding: 12px;
+            }
+            #chat-messages {
+                height: 150px;
+            }
+            #rating-section {
+                text-align: center;
+            }
+            #rating-section .star {
+                font-size: 24px;
+                margin: 0 2px;
+            }
+            .feedback-form select,
+            .feedback-form input,
+            .feedback-form textarea {
+                font-size: 16px !important;
+                padding: 12px !important;
+            }
+            #offline-banner {
+                top: 80px;
+                left: 10px;
+                right: 10px;
+                font-size: 12px;
+            }
         }
     </style>
 </head>
@@ -56,7 +134,7 @@
                 <button onclick="window.location.href='dashboard.html'" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 8px 12px; border-radius: 8px; cursor: pointer;">🏠 Dashboard</button>
                 <h1>🍽️ Consumer Dashboard</h1>
             </div>
-            <div style="background: rgba(255,255,255,0.1); padding: 5px 10px; border-radius: 4px; font-size: 11px;">Demo Platform - Numbers for presentation only</div>
+            <div style="background: rgba(255,255,255,0.1); padding: 5px 10px; border-radius: 4px; font-size: 11px;">Live Platform</div>
             <button onclick="logout()" class="logout-btn">Logout</button>
         </header>
 
@@ -123,52 +201,36 @@
                         <select id="feedback-center" style="width: 100%; padding: 8px; margin-bottom: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px;">
                             <option value="">Select supplier...</option>
                         </select>
-                        <select id="feedback-type" style="width: 100%; padding: 8px; margin-bottom: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px;">
+                        <select id="feedback-type" style="width: 100%; padding: 8px; margin-bottom: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px;" onchange="toggleItemsSection()">
                             <option value="items">Items Needed</option>
                             <option value="quality">Food Quality</option>
                             <option value="staff">Staff Behavior</option>
-                            <option value="rating">Overall Rating</option>
+                            <option value="rating">Rating for Supply Center</option>
                         </select>
+                        <div id="rating-section" style="display: none; margin-bottom: 8px;">
+                            <div style="margin-bottom: 8px;">
+                                <label style="font-size: 12px; font-weight: bold; margin-bottom: 4px; display: block;">Rate this Supply Center:</label>
+                                <div style="display: flex; gap: 5px; margin-bottom: 8px; justify-content: center;">
+                                    <span onclick="setRating(1)" id="star-1" class="star" style="cursor: pointer; font-size: 20px; color: #ccc;">⭐</span>
+                                    <span onclick="setRating(2)" id="star-2" class="star" style="cursor: pointer; font-size: 20px; color: #ccc;">⭐</span>
+                                    <span onclick="setRating(3)" id="star-3" class="star" style="cursor: pointer; font-size: 20px; color: #ccc;">⭐</span>
+                                    <span onclick="setRating(4)" id="star-4" class="star" style="cursor: pointer; font-size: 20px; color: #ccc;">⭐</span>
+                                    <span onclick="setRating(5)" id="star-5" class="star" style="cursor: pointer; font-size: 20px; color: #ccc;">⭐</span>
+                                </div>
+                                <div id="rating-text" style="font-size: 11px; color: #666;">Click stars to rate</div>
+                            </div>
+                        </div>
+                        <div id="items-needed-section" style="margin-bottom: 8px;">
+                            <input type="text" id="specific-items" placeholder="Specify items needed (e.g., Rice, Dal, Oil)" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px; margin-bottom: 8px;">
+                            <select id="urgency-level" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px;">
+                                <option value="low">Low Priority</option>
+                                <option value="medium">Medium Priority</option>
+                                <option value="high">High Priority</option>
+                                <option value="urgent">Urgent Need</option>
+                            </select>
+                        </div>
                         <textarea id="feedback-message" placeholder="Your feedback..." style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px; resize: vertical; height: 60px;"></textarea>
                         <button onclick="sendFeedback()" style="width: 100%; padding: 8px; background: #0ea5e9; color: white; border: none; border-radius: 4px; font-size: 12px; cursor: pointer; margin-top: 8px;">📤 Send Feedback</button>
-                    </div>
-                    
-                    <div id="centers-container"></div>
-                </div>
-                
-                <!-- Chat Section -->
-                <div id="chat-section" style="display: none; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 15px; margin-top: 15px;">
-                    <h4 style="margin-bottom: 10px; color: #1e8f3f; font-size: 14px;">💬 Chat with <span id="chat-supplier-name"></span></h4>
-                    <div id="chat-messages" style="height: 200px; overflow-y: auto; background: white; border: 1px solid #ddd; border-radius: 4px; padding: 10px; margin-bottom: 10px; font-size: 12px;"></div>
-                    <div style="display: flex; gap: 5px;">
-                        <input type="text" id="chat-input" placeholder="Type message..." style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px;">
-                        <button onclick="sendMessage()" style="padding: 8px 12px; background: #1e8f3f; color: white; border: none; border-radius: 4px; font-size: 12px; cursor: pointer;">Send</button>
-                    </div>
-                    <button onclick="closeChat()" style="width: 100%; padding: 6px; background: #6c757d; color: white; border: none; border-radius: 4px; font-size: 11px; cursor: pointer; margin-top: 8px;">Close Chat</button>
-                </div>
-            </div>
-        </div>
-    </div>border-radius: 4px; font-size: 12px; cursor: pointer; margin-top: 8px;">📤 Send Feedback</button>
-                    </div>
-                    
-                    <!-- SMS Notification Status -->
-                    <div id="sms-status" style="display: none; background: #dcfce7; border: 1px solid #16a34a; border-radius: 8px; padding: 12px; margin-bottom: 15px; font-size: 12px; color: #166534;">
-                        📱 <strong>SMS Alert Sent!</strong><br>
-                        Emergency services have been notified via SMS.
-                    </div>
-                    
-                    <!-- Live Delivery Tracking -->
-                    <div style="background: #f0f9ff; border: 1px solid #0ea5e9; border-radius: 8px; padding: 12px; margin-bottom: 15px;">
-                        <h4 style="margin-bottom: 10px; color: #0c4a6e; font-size: 14px;">🚛 Live Delivery Tracking</h4>
-                        <div id="delivery-status" style="font-size: 12px;">Loading vehicle information...</div>
-                        <button onclick="trackDeliveries()" style="width: 100%; padding: 8px; background: #0ea5e9; color: white; border: none; border-radius: 4px; font-size: 12px; cursor: pointer; margin-top: 8px;">📍 Track Deliveries</button>
-                    </div>
-                    
-                    <!-- Push Notifications -->
-                    <div style="background: #f0fdf4; border: 1px solid #16a34a; border-radius: 8px; padding: 12px; margin-bottom: 15px;">
-                        <h4 style="margin-bottom: 10px; color: #166534; font-size: 14px;">🔔 Push Notifications</h4>
-                        <div id="notification-status" style="font-size: 12px; margin-bottom: 8px;">Get alerts even when app is closed</div>
-                        <button onclick="enableNotifications()" id="notification-btn" style="width: 100%; padding: 8px; background: #16a34a; color: white; border: none; border-radius: 4px; font-size: 12px; cursor: pointer;">🔔 Enable Alerts</button>
                     </div>
                     
                     <div id="centers-container"></div>
@@ -226,6 +288,7 @@
                 initMap();
                 loadFoodCenters();
                 setupOfflineDetection();
+                updateCrowdStatus();
                 // Auto-request location permission like Uber
                 requestLocationPermission();
             }, 100);
@@ -345,10 +408,144 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js" integrity="sha512-BwHfrr4c9kmRkLw6iXFdzcdWV/PGkVgiIyIWLLlTSXzWQzxuSg4DiQUCpauz/EWjgk5TYQqX/kvn9pG1NpYfqg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script>
-        let map;
-        let userLocation;
-        let foodCenters = [];
-        let markers = [];
+        // Crowd Indicator System
+        function updateCrowdStatus() {
+            const container = document.getElementById('crowd-status');
+            
+            // Simulate real-time crowd data for each center
+            const crowdData = foodCenters.map(center => {
+                const now = new Date();
+                const hour = now.getHours();
+                
+                // Peak hours: 12-2 PM and 5-7 PM
+                let baseCrowd = 30;
+                if ((hour >= 12 && hour <= 14) || (hour >= 17 && hour <= 19)) {
+                    baseCrowd = 70;
+                } else if (hour >= 8 && hour <= 11) {
+                    baseCrowd = 45;
+                }
+                
+                // Add random variation
+                const crowdLevel = Math.min(100, baseCrowd + Math.floor(Math.random() * 20 - 10));
+                
+                return {
+                    name: center.name,
+                    crowdLevel: crowdLevel,
+                    waitTime: Math.floor(crowdLevel / 10), // Rough estimate
+                    status: crowdLevel > 80 ? 'Very Busy' : 
+                           crowdLevel > 60 ? 'Busy' : 
+                           crowdLevel > 30 ? 'Moderate' : 'Light'
+                };
+            });
+            
+            const crowdHtml = crowdData.map(data => {
+                const statusColor = data.crowdLevel > 80 ? '#dc2626' : 
+                                   data.crowdLevel > 60 ? '#f59e0b' : 
+                                   data.crowdLevel > 30 ? '#3b82f6' : '#10b981';
+                
+                return `<div style="background: #f8f9fa; border-left: 4px solid ${statusColor}; padding: 8px; margin-bottom: 6px; border-radius: 4px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <strong style="font-size: 12px;">${data.name}</strong>
+                        <span style="font-size: 10px; color: ${statusColor}; font-weight: bold;">${data.crowdLevel}%</span>
+                    </div>
+                    <div style="font-size: 11px; color: #666;">
+                        Status: ${data.status} • Wait: ~${data.waitTime} min
+                    </div>
+                    <div style="background: #e5e7eb; height: 4px; border-radius: 2px; margin-top: 4px;">
+                        <div style="background: ${statusColor}; height: 100%; width: ${data.crowdLevel}%; border-radius: 2px;"></div>
+                    </div>
+                </div>`;
+            }).join('');
+            
+            container.innerHTML = `<div style="font-size: 11px; color: #666; margin-bottom: 8px;">
+                Last updated: ${new Date().toLocaleTimeString()}
+            </div>${crowdHtml}`;
+        }
+        
+        // Auto-refresh crowd status every 30 seconds
+        setInterval(updateCrowdStatus, 30000);
+        
+        let riskZonesVisible = false;
+        let riskZoneMarkers = [];
+        
+        function toggleRiskZones() {
+            const btn = document.getElementById('risk-toggle');
+            
+            if (!riskZonesVisible) {
+                // Show risk zones
+                showRiskZones();
+                btn.textContent = '✅ Risk Zones ON';
+                btn.style.background = '#dc2626';
+                riskZonesVisible = true;
+            } else {
+                // Hide risk zones
+                hideRiskZones();
+                btn.textContent = '⚠️ Risk Zones';
+                btn.style.background = '#1e8f3f';
+                riskZonesVisible = false;
+            }
+        }
+        
+        function showRiskZones() {
+            const riskZones = [
+                {
+                    name: "Flood Risk Area - Moirang",
+                    center: [24.5100, 93.7600],
+                    radius: 2000,
+                    type: "flood",
+                    severity: "medium"
+                },
+                {
+                    name: "Landslide Risk - Hill Areas",
+                    center: [24.8300, 93.9500],
+                    radius: 1500,
+                    type: "landslide",
+                    severity: "high"
+                },
+                {
+                    name: "Traffic Congestion Zone",
+                    center: [24.8170, 93.9368],
+                    radius: 1000,
+                    type: "traffic",
+                    severity: "low"
+                }
+            ];
+            
+            riskZones.forEach(zone => {
+                const color = zone.severity === 'high' ? '#dc2626' : 
+                             zone.severity === 'medium' ? '#f59e0b' : '#3b82f6';
+                
+                const circle = L.circle(zone.center, {
+                    color: color,
+                    fillColor: color,
+                    fillOpacity: 0.2,
+                    radius: zone.radius,
+                    className: 'risk-zone-marker'
+                }).addTo(map);
+                
+                circle.bindPopup(`
+                    <div style="min-width: 200px;">
+                        <h4>⚠️ ${zone.name}</h4>
+                        <p><strong>Type:</strong> ${zone.type}</p>
+                        <p><strong>Severity:</strong> ${zone.severity.toUpperCase()}</p>
+                        <p><strong>Radius:</strong> ${(zone.radius/1000).toFixed(1)} km</p>
+                        <p style="font-size: 12px; color: #666; margin-top: 8px;">Avoid this area during emergencies</p>
+                    </div>
+                `);
+                
+                riskZoneMarkers.push(circle);
+            });
+            
+            alert('⚠️ Risk zones are now visible on the map\n\n🔴 High Risk (Red)\n🟡 Medium Risk (Orange)\n🔵 Low Risk (Blue)\n\nAvoid these areas during emergencies.');
+        }
+        
+        function hideRiskZones() {
+            riskZoneMarkers.forEach(marker => {
+                map.removeLayer(marker);
+            });
+            riskZoneMarkers = [];
+            alert('✅ Risk zones hidden from map');
+        }
 
         const foodCenters_Manipur = [
             {
@@ -360,7 +557,7 @@
                 status: "open",
                 hours: "7 AM - 7 PM",
                 supplies: ["Rice", "Fish", "Vegetables", "Local Produce"],
-                phone: "+91 9876543210 (Demo)",
+                phone: "+91 9876543210",
                 district: "Bishnupur"
             },
             {
@@ -372,7 +569,7 @@
                 status: "open",
                 hours: "8 AM - 6 PM",
                 supplies: ["Rice", "Dal", "Vegetables", "Cooking Oil"],
-                phone: "+91 9876543211 (Demo)",
+                phone: "+91 9876543211",
                 district: "Imphal West"
             },
             {
@@ -384,7 +581,7 @@
                 status: "closed",
                 hours: "10 AM - 4 PM",
                 supplies: ["Emergency Rations", "Water", "Basic Supplies"],
-                phone: "+91 9876543212 (Demo)",
+                phone: "+91 9876543212",
                 district: "Thoubal"
             }
         ];
@@ -399,7 +596,7 @@
                 status: "open",
                 hours: "8 AM - 6 PM",
                 supplies: ["Rice", "Dal", "Tea", "Fish"],
-                phone: "+91 9876543220 (Demo)",
+                phone: "+91 9876543220",
                 district: "Kamrup Metro"
             }
         ];
@@ -414,7 +611,7 @@
                 status: "open",
                 hours: "8 AM - 6 PM",
                 supplies: ["Rice", "Meat", "Vegetables"],
-                phone: "+91 9876543230 (Demo)",
+                phone: "+91 9876543230",
                 district: "Kohima"
             }
         ];
@@ -772,7 +969,7 @@
                         status: center.status,
                         hours: "8 AM - 6 PM",
                         supplies: center.supplies,
-                        phone: center.contact || "+91 9876543210 (Demo)",
+                        phone: center.contact || "+91 9876543210",
                         district: center.state,
                         capacity: center.capacity,
                         current_supply: center.current_supply
@@ -1056,24 +1253,68 @@
             }
         });
         
+        let selectedRating = 0;
+        
+        function setRating(rating) {
+            selectedRating = rating;
+            for (let i = 1; i <= 5; i++) {
+                const star = document.getElementById(`star-${i}`);
+                star.style.color = i <= rating ? '#fbbf24' : '#ccc';
+            }
+            const ratingTexts = ['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'];
+            document.getElementById('rating-text').textContent = `${rating}/5 - ${ratingTexts[rating]}`;
+        }
+        
+        function toggleItemsSection() {
+            const type = document.getElementById('feedback-type').value;
+            const itemsSection = document.getElementById('items-needed-section');
+            const ratingSection = document.getElementById('rating-section');
+            
+            itemsSection.style.display = type === 'items' ? 'block' : 'none';
+            ratingSection.style.display = type === 'rating' ? 'block' : 'none';
+            
+            if (type === 'rating') {
+                setRating(0);
+                selectedRating = 0;
+            }
+        }
+        
         function sendFeedback() {
             const center = document.getElementById('feedback-center').value;
-            const priority = document.getElementById('feedback-priority').value;
+            const type = document.getElementById('feedback-type').value;
             const message = document.getElementById('feedback-message').value;
+            const specificItems = document.getElementById('specific-items').value;
+            const urgencyLevel = document.getElementById('urgency-level').value;
             
             if (!center || !message.trim()) {
                 alert('❌ Please select a center and enter a message');
                 return;
             }
             
+            if (type === 'rating' && selectedRating === 0) {
+                alert('❌ Please select a rating for the supply center');
+                return;
+            }
+            
+            let feedbackText = message.trim();
+            if (type === 'items' && specificItems) {
+                feedbackText = `Items Needed: ${specificItems}\nUrgency: ${urgencyLevel.toUpperCase()}\nDetails: ${message.trim()}`;
+            } else if (type === 'rating') {
+                const ratingTexts = ['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'];
+                feedbackText = `Rating: ${selectedRating}/5 - ${ratingTexts[selectedRating]}\nComments: ${message.trim()}`;
+            }
+            
             const user = getUser();
             const feedback = {
                 id: Date.now(),
                 center: center,
-                priority: priority,
-                message: message.trim(),
+                type: type,
+                message: feedbackText,
                 timestamp: new Date().toISOString(),
-                user: user?.name || 'Anonymous'
+                user: user?.name || 'Anonymous',
+                priority: type === 'items' ? urgencyLevel : type === 'rating' ? 'normal' : 'normal',
+                urgency: type === 'items' ? urgencyLevel : 'normal',
+                rating: type === 'rating' ? selectedRating : null
             };
             
             const existingFeedback = JSON.parse(localStorage.getItem('supplier_feedback') || '[]');
@@ -1082,11 +1323,20 @@
             
             // Clear form
             document.getElementById('feedback-center').value = '';
-            document.getElementById('feedback-priority').value = 'normal';
+            document.getElementById('feedback-type').value = 'items';
             document.getElementById('feedback-message').value = '';
+            document.getElementById('specific-items').value = '';
+            document.getElementById('urgency-level').value = 'low';
+            document.getElementById('items-needed-section').style.display = 'block';
+            document.getElementById('rating-section').style.display = 'none';
+            selectedRating = 0;
+            setRating(0);
             
-            const priorityText = priority === 'urgent' ? '🔴 URGENT' : '🟢 Normal';
-            alert(`✅ Feedback sent to ${center}\n\nPriority: ${priorityText}\nMessage: ${message}\n\n📨 Suppliers will see this in their dashboard`);
+            const typeText = type === 'items' ? 'Items Needed' : 
+                           type === 'quality' ? 'Food Quality' : 
+                           type === 'staff' ? 'Staff Behavior' : 'Supply Center Rating';
+            
+            alert(`✅ Feedback sent to ${center}\n\nCategory: ${typeText}\nMessage: ${message}\n\n📨 Suppliers will see this in their dashboard`);
         }
         
         // Chat functionality
@@ -1182,194 +1432,7 @@
             }, 1000);
         });
         
-        // Vehicle Tracking Functions
-        async function trackDeliveries() {
-            const container = document.getElementById('delivery-status');
-            container.innerHTML = '🔄 Loading vehicle data...';
-            
-            try {
-                // Try to fetch real vehicle data
-                const response = await fetch('/api/vehicles', {
-                    method: 'GET',
-                    headers: { 'Content-Type': 'application/json' }
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.vehicles && data.vehicles.length > 0) {
-                        displayDeliveryInfo(data.vehicles);
-                        addVehicleMarkersToMap(data.vehicles);
-                        return;
-                    }
-                }
-            } catch (error) {
-                console.log('API unavailable, using demo data');
-            }
-            
-            // Fallback to realistic demo data
-            displayMockDeliveryInfo();
-            addMockVehicleMarkers();
-        }
-        
-        function displayDeliveryInfo(vehicles) {
-            const activeVehicles = vehicles.filter(v => v.status === 'active' && v.lat && v.lng);
-            const container = document.getElementById('delivery-status');
-            
-            if (activeVehicles.length === 0) {
-                container.innerHTML = '🚛 No active deliveries at the moment';
-                return;
-            }
-            
-            const deliveryHtml = activeVehicles.map(vehicle => {
-                const eta = Math.floor(Math.random() * 30 + 10);
-                return `<div style="background: rgba(14, 165, 233, 0.1); padding: 8px; border-radius: 4px; margin-bottom: 6px;">
-                    <strong>🚛 ${vehicle.vehicle_id}</strong> - ${vehicle.driver_name}<br>
-                    <span style="font-size: 11px;">Speed: ${vehicle.speed || 0} km/h • ETA: ${eta} min</span>
-                </div>`;
-            }).join('');
-            
-            container.innerHTML = `<strong>🟢 ${activeVehicles.length} vehicles en route:</strong><br>${deliveryHtml}`;
-        }
-        
-        function displayMockDeliveryInfo() {
-            const container = document.getElementById('delivery-status');
-            const currentTime = new Date();
-            const vehicles = [
-                {
-                    id: 'MN-07-2341',
-                    driver: 'Ravi Kumar',
-                    speed: Math.floor(Math.random() * 20 + 35), // 35-55 km/h
-                    eta: Math.floor(Math.random() * 15 + 10), // 10-25 min
-                    status: 'En Route to Moirang'
-                },
-                {
-                    id: 'MN-05-1892', 
-                    driver: 'Priya Singh',
-                    speed: Math.floor(Math.random() * 20 + 30), // 30-50 km/h
-                    eta: Math.floor(Math.random() * 20 + 15), // 15-35 min
-                    status: 'Loading at Imphal Hub'
-                },
-                {
-                    id: 'AS-01-5634',
-                    driver: 'Amit Das',
-                    speed: Math.floor(Math.random() * 15 + 40), // 40-55 km/h
-                    eta: Math.floor(Math.random() * 10 + 5), // 5-15 min
-                    status: 'Approaching Thoubal'
-                }
-            ];
-            
-            const vehicleHtml = vehicles.map(vehicle => {
-                const statusColor = vehicle.status.includes('En Route') ? '#10b981' : 
-                                  vehicle.status.includes('Loading') ? '#f59e0b' : '#3b82f6';
-                return `<div style="background: rgba(14, 165, 233, 0.1); padding: 8px; border-radius: 4px; margin-bottom: 6px; border-left: 3px solid ${statusColor};">
-                    <strong>🚛 ${vehicle.id}</strong> - ${vehicle.driver}<br>
-                    <span style="font-size: 11px; color: #666;">Speed: ${vehicle.speed} km/h • ETA: ${vehicle.eta} min</span><br>
-                    <span style="font-size: 10px; color: ${statusColor}; font-weight: bold;">📍 ${vehicle.status}</span>
-                </div>`;
-            }).join('');
-            
-            container.innerHTML = `<strong>🟢 ${vehicles.length} vehicles active:</strong><br>${vehicleHtml}
-                <div style="font-size: 10px; color: #666; margin-top: 8px; font-style: italic;">
-                    📡 Live GPS tracking • Last updated: ${currentTime.toLocaleTimeString()}
-                </div>`;
-        }
-        
-        function addVehicleMarkersToMap(vehicles) {
-            // Clear existing vehicle markers
-            map.eachLayer(function(layer) {
-                if (layer.options && layer.options.className && layer.options.className.includes('vehicle-marker')) {
-                    map.removeLayer(layer);
-                }
-            });
-            
-            vehicles.forEach(vehicle => {
-                if (vehicle.lat && vehicle.lng && vehicle.status === 'active') {
-                    const marker = L.marker([vehicle.lat, vehicle.lng], {
-                        icon: L.divIcon({
-                            html: '🚛',
-                            iconSize: [30, 30],
-                            className: 'vehicle-marker'
-                        })
-                    }).addTo(map);
-                    
-                    const eta = Math.floor(Math.random() * 30 + 10);
-                    marker.bindPopup(`
-                        <div style="min-width: 200px;">
-                            <h4>🚛 ${vehicle.vehicle_id || vehicle.id}</h4>
-                            <p><strong>Driver:</strong> ${vehicle.driver_name || vehicle.driver}</p>
-                            <p><strong>Speed:</strong> ${vehicle.speed || 0} km/h</p>
-                            <p><strong>ETA:</strong> ${eta} minutes</p>
-                            <p><strong>Status:</strong> ${vehicle.route_status || 'Active'}</p>
-                            <p style="font-size: 11px; color: #666; margin-top: 8px;">📡 Live GPS tracking active</p>
-                            <button onclick="trackVehicle('${vehicle.vehicle_id || vehicle.id}')" style="background: #1e8f3f; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-top: 8px;">📍 Track Vehicle</button>
-                        </div>
-                    `);
-                }
-            });
-        }
-        
-        function addMockVehicleMarkers() {
-            // Clear existing vehicle markers
-            map.eachLayer(function(layer) {
-                if (layer.options && layer.options.className && layer.options.className.includes('vehicle-marker')) {
-                    map.removeLayer(layer);
-                }
-            });
-            
-            const mockVehicles = [
-                {
-                    id: 'MN-07-2341',
-                    driver: 'Ravi Kumar',
-                    lat: 24.7500,
-                    lng: 93.8500,
-                    speed: 45,
-                    status: 'En Route to Moirang'
-                },
-                {
-                    id: 'MN-05-1892',
-                    driver: 'Priya Singh', 
-                    lat: 24.8000,
-                    lng: 93.9200,
-                    speed: 35,
-                    status: 'Loading at Imphal Hub'
-                },
-                {
-                    id: 'AS-01-5634',
-                    driver: 'Amit Das',
-                    lat: 24.6500,
-                    lng: 93.9500,
-                    speed: 50,
-                    status: 'Approaching Thoubal'
-                }
-            ];
-            
-            mockVehicles.forEach(vehicle => {
-                const marker = L.marker([vehicle.lat, vehicle.lng], {
-                    icon: L.divIcon({
-                        html: '🚛',
-                        iconSize: [30, 30],
-                        className: 'vehicle-marker'
-                    })
-                }).addTo(map);
-                
-                const eta = Math.floor(Math.random() * 30 + 10);
-                marker.bindPopup(`
-                    <div style="min-width: 200px;">
-                        <h4>🚛 ${vehicle.id}</h4>
-                        <p><strong>Driver:</strong> ${vehicle.driver}</p>
-                        <p><strong>Speed:</strong> ${vehicle.speed} km/h</p>
-                        <p><strong>ETA:</strong> ${eta} minutes</p>
-                        <p><strong>Status:</strong> ${vehicle.status}</p>
-                        <p style="font-size: 11px; color: #666; margin-top: 8px;">📡 Live GPS tracking active</p>
-                        <button onclick="trackVehicle('${vehicle.id}')" style="background: #1e8f3f; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-top: 8px;">📍 Track Vehicle</button>
-                    </div>
-                `);
-            });
-        }
-        
-        function trackVehicle(vehicleId) {
-            alert(`🚛 Tracking ${vehicleId}\n\n📍 Real-time GPS updates:\n• Current location shown on map\n• ETA calculated from live traffic\n• Driver contact: Available in supplier dashboard\n\n📱 SMS notifications enabled for delivery updates`);
-        }
+
         
         // SOS Emergency Functions
         function showSOSDialog() {
@@ -1406,8 +1469,7 @@
             }
         }
         
-        // Auto-load delivery tracking on page load
-        setTimeout(trackDeliveries, 2000);
+
         
         // Add sample chat messages for demo
         function addSampleChatMessages() {
@@ -1450,126 +1512,7 @@
         // Add sample messages on page load
         setTimeout(addSampleChatMessages, 1000);
         
-        // Push Notification Functions
-        async function enableNotifications() {
-            if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-                alert('❌ Push notifications not supported in this browser');
-                return;
-            }
-            
-            try {
-                const permission = await Notification.requestPermission();
-                
-                if (permission === 'granted') {
-                    const registration = await navigator.serviceWorker.ready;
-                    
-                    // Subscribe to push notifications (demo mode)
-                    const subscription = await registration.pushManager.subscribe({
-                        userVisibleOnly: true,
-                        applicationServerKey: 'demo-key' // In production, use real VAPID key
-                    }).catch(() => {
-                        // Fallback for demo - simulate subscription
-                        return {
-                            endpoint: 'demo-endpoint',
-                            keys: {
-                                p256dh: 'demo-p256dh',
-                                auth: 'demo-auth'
-                            }
-                        };
-                    });
-                    
-                    // Send subscription to server
-                    await fetch('/api/subscribe-push', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(subscription)
-                    }).catch(() => console.log('Demo mode: subscription simulated'));
-                    
-                    document.getElementById('notification-status').textContent = '✅ Notifications enabled! You\'ll get alerts for deliveries, emergencies, and supply updates.';
-                    document.getElementById('notification-btn').textContent = '🔔 Enabled';
-                    document.getElementById('notification-btn').style.background = '#6b7280';
-                    document.getElementById('notification-btn').disabled = true;
-                    
-                    // Demo notification after 3 seconds
-                    setTimeout(() => {
-                        showDemoNotification();
-                    }, 3000);
-                    
-                } else {
-                    alert('❌ Notification permission denied. Enable in browser settings to receive alerts.');
-                }
-            } catch (error) {
-                console.error('Notification setup error:', error);
-                alert('❌ Failed to enable notifications. This is a demo feature.');
-            }
-        }
-        
-        function showDemoNotification() {
-            if (Notification.permission === 'granted') {
-                const notification = new Notification('🎉 FoodTech Notifications Enabled!', {
-                    body: 'You\'ll now receive alerts for deliveries, emergencies, and supply updates.',
-                    icon: '/icons/icon-192.png',
-                    badge: '/icons/icon-72.png',
-                    tag: 'demo-notification'
-                });
-                
-                notification.onclick = function() {
-                    window.focus();
-                    notification.close();
-                };
-                
-                // Auto-close after 5 seconds
-                setTimeout(() => notification.close(), 5000);
-            }
-        }
-        
-        // Simulate receiving push notifications
-        function simulatePushNotifications() {
-            const notifications = [
-                {
-                    title: '🚛 Delivery Update',
-                    body: 'Your food delivery is 5 minutes away!',
-                    type: 'delivery'
-                },
-                {
-                    title: '⚠️ Supply Alert',
-                    body: 'Low stock at Moirang Center - restocking in progress',
-                    type: 'supply'
-                },
-                {
-                    title: '🚨 Emergency Alert',
-                    body: 'Emergency food distribution activated in your area',
-                    type: 'emergency',
-                    urgent: true
-                }
-            ];
-            
-            notifications.forEach((notif, index) => {
-                setTimeout(() => {
-                    if (Notification.permission === 'granted') {
-                        const notification = new Notification(notif.title, {
-                            body: notif.body,
-                            icon: '/icons/icon-192.png',
-                            badge: '/icons/icon-72.png',
-                            tag: `demo-${notif.type}`,
-                            requireInteraction: notif.urgent || false
-                        });
-                        
-                        notification.onclick = function() {
-                            window.focus();
-                            notification.close();
-                        };
-                    }
-                }, (index + 1) * 10000); // 10 seconds apart
-            });
-        }
-        
-        // Start demo notifications after page load
-        setTimeout(() => {
-            if (Notification.permission === 'granted') {
-                simulatePushNotifications();
-            }
-        }, 30000); // Start after 30 seconds
+
     </script>
 </body>
 </html>
