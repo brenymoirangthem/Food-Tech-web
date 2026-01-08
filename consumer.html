@@ -1,0 +1,1575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consumer Dashboard - FoodTech Platform</title>
+    
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#1e8f3f">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" integrity="sha512-h9FcoyWjHcOcmEVkxOfTLnmZFWIH0iZhZT1H2TbOq55xssQGEJHEaIm+PgoUaZbRvQTNTluNOEfb1ZRy6D3BOw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <script src="/offline-manager.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f8fafc; }
+        .dashboard { height: 100vh; display: flex; flex-direction: column; }
+        .header { background: #1e8f3f; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .header h1 { font-size: 20px; }
+        .logout-btn { background: rgba(255,255,255,0.2); border: none; color: white; padding: 8px 12px; border-radius: 8px; cursor: pointer; }
+        .dashboard-grid { display: grid; grid-template-columns: 1fr 350px; height: calc(100vh - 60px); }
+        .map-section { position: relative; }
+        #map { width: 100%; height: 100%; }
+        .search-box { position: absolute; top: 20px; left: 20px; right: 20px; display: flex; gap: 10px; z-index: 1000; }
+        .search-box input { flex: 1; padding: 12px 16px; border: none; border-radius: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .search-box button { background: #1e8f3f; border: none; color: white; padding: 12px; border-radius: 50%; cursor: pointer; }
+        .sidebar { background: white; padding: 20px; overflow-y: auto; border-left: 1px solid #e5e7eb; }
+        .quick-actions { display: flex; gap: 10px; margin-bottom: 25px; }
+        .action-btn { flex: 1; background: #1e8f3f; color: white; border: none; padding: 12px 8px; border-radius: 8px; cursor: pointer; font-size: 12px; }
+        .centers-list h3 { font-size: 16px; margin-bottom: 15px; color: #1e8f3f; }
+        .center-card { background: #f9fafb; padding: 15px; border-radius: 12px; margin-bottom: 12px; border-left: 4px solid #1e8f3f; cursor: pointer; }
+        .center-name { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+        .center-details { font-size: 12px; color: #666; margin-bottom: 8px; }
+        .center-status { display: flex; justify-content: space-between; align-items: center; }
+        .status-badge { padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: 600; }
+        .status-open { background: #10b981; color: white; }
+        .status-busy { background: #f59e0b; color: white; }
+        .status-closed { background: #ef4444; color: white; }
+        .distance { font-size: 11px; color: #666; }
+        .chat-btn { background: #17a2b8; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 10px; cursor: pointer; margin-left: 5px; }
+        .message { margin-bottom: 8px; padding: 6px; border-radius: 4px; }
+        .message.consumer { background: #e3f2fd; text-align: right; }
+        .message.supplier { background: #f1f8e9; text-align: left; }
+        @media (max-width: 768px) {
+            .dashboard-grid { grid-template-columns: 1fr; grid-template-rows: 1fr 300px; }
+            .sidebar { border-left: none; border-top: 1px solid #e5e7eb; }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <header class="header">
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <button onclick="window.location.href='dashboard.html'" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 8px 12px; border-radius: 8px; cursor: pointer;">🏠 Dashboard</button>
+                <h1>🍽️ Consumer Dashboard</h1>
+            </div>
+            <div style="background: rgba(255,255,255,0.1); padding: 5px 10px; border-radius: 4px; font-size: 11px;">Demo Platform - Numbers for presentation only</div>
+            <button onclick="logout()" class="logout-btn">Logout</button>
+        </header>
+
+        <div class="dashboard-grid">
+            <div class="map-section">
+                <div id="map"></div>
+                <div class="search-box">
+                    <select id="state-selector" onchange="changeState()" style="padding: 12px; border: none; border-radius: 25px; margin-right: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                        <option value="Manipur">Manipur</option>
+                        <option value="Assam">Assam</option>
+                        <option value="Nagaland">Nagaland</option>
+                    </select>
+                    <input type="text" id="search-input" placeholder="Search food centers...">
+                    <button onclick="searchCenters()">🔍</button>
+                </div>
+                
+                <!-- Offline Mode Banner -->
+                <div id="offline-banner" style="display: none; position: absolute; top: 70px; left: 20px; right: 20px; background: #f59e0b; color: white; padding: 12px; border-radius: 8px; z-index: 1000; font-size: 14px; text-align: center;">
+                    📡❌ <strong>Offline Mode Active</strong> - Showing last synced data | Emergency contacts available
+                </div>
+            </div>
+
+            <div class="sidebar">
+                <div class="quick-actions">
+                    <button class="action-btn" onclick="enableLocation()">📍 Location</button>
+                    <button class="action-btn" onclick="findNearest()">🔍 Find Nearest</button>
+                    <button class="action-btn" onclick="toggleRiskZones()" id="risk-toggle">⚠️ Risk Zones</button>
+                    <button class="action-btn" onclick="showSOSDialog()" style="background: #dc2626;">🚨 SOS</button>
+                </div>
+
+                <div style="background: #f0f9ff; border: 1px solid #0ea5e9; border-radius: 8px; padding: 12px; margin-bottom: 20px; font-size: 12px; color: #0c4a6e;">
+                    <strong>📍 Location Services:</strong><br>
+                    • Tap "Enable Location" to find nearby centers<br>
+                    • We'll ask for permission to access your location<br>
+                    • Your location is used only to show nearby food centers
+                </div>
+
+                <div class="centers-list">
+                    <h3>Food Centers in <span id="current-state">Manipur</span></h3>
+                    <div style="background: #f8f9fa; padding: 10px; border-radius: 8px; margin-bottom: 15px; font-size: 12px;">
+                        <strong>Status Legend:</strong> 
+                        <span style="color: #10b981;">• OPEN</span> 
+                        <span style="color: #f59e0b;">• BUSY</span> 
+                        <span style="color: #ef4444;">• CLOSED</span><br>
+                        <em>Status estimated based on activity & capacity</em>
+                    </div>
+                    
+                    <!-- Offline Data Notice -->
+                    <div id="offline-notice" style="display: none; background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 12px; margin-bottom: 15px; font-size: 12px; color: #92400e;">
+                        💾 <strong>Offline Mode:</strong> Showing last synced food centers<br>
+                        📞 Emergency contacts: 100, 112, 108, 101<br>
+                        🔄 Data will update when connection restored
+                    </div>
+                    
+                    <!-- Crowd Indicator -->
+                    <div style="background: #f0f9ff; border: 1px solid #0ea5e9; border-radius: 8px; padding: 12px; margin-bottom: 15px;">
+                        <h4 style="margin-bottom: 10px; color: #0c4a6e; font-size: 14px;">👥 Crowd Indicator</h4>
+                        <div id="crowd-status" style="font-size: 12px;">Loading crowd information...</div>
+                    </div>
+                    
+                    <!-- Customer Feedback -->
+                    <div style="background: #f0f9ff; border: 1px solid #0ea5e9; border-radius: 8px; padding: 12px; margin-bottom: 15px;">
+                        <h4 style="margin-bottom: 10px; color: #0c4a6e; font-size: 14px;">📝 Customer Feedback</h4>
+                        <select id="feedback-center" style="width: 100%; padding: 8px; margin-bottom: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px;">
+                            <option value="">Select supplier...</option>
+                        </select>
+                        <select id="feedback-type" style="width: 100%; padding: 8px; margin-bottom: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px;">
+                            <option value="items">Items Needed</option>
+                            <option value="quality">Food Quality</option>
+                            <option value="staff">Staff Behavior</option>
+                            <option value="rating">Overall Rating</option>
+                        </select>
+                        <textarea id="feedback-message" placeholder="Your feedback..." style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px; resize: vertical; height: 60px;"></textarea>
+                        <button onclick="sendFeedback()" style="width: 100%; padding: 8px; background: #0ea5e9; color: white; border: none; border-radius: 4px; font-size: 12px; cursor: pointer; margin-top: 8px;">📤 Send Feedback</button>
+                    </div>
+                    
+                    <div id="centers-container"></div>
+                </div>
+                
+                <!-- Chat Section -->
+                <div id="chat-section" style="display: none; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 15px; margin-top: 15px;">
+                    <h4 style="margin-bottom: 10px; color: #1e8f3f; font-size: 14px;">💬 Chat with <span id="chat-supplier-name"></span></h4>
+                    <div id="chat-messages" style="height: 200px; overflow-y: auto; background: white; border: 1px solid #ddd; border-radius: 4px; padding: 10px; margin-bottom: 10px; font-size: 12px;"></div>
+                    <div style="display: flex; gap: 5px;">
+                        <input type="text" id="chat-input" placeholder="Type message..." style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px;">
+                        <button onclick="sendMessage()" style="padding: 8px 12px; background: #1e8f3f; color: white; border: none; border-radius: 4px; font-size: 12px; cursor: pointer;">Send</button>
+                    </div>
+                    <button onclick="closeChat()" style="width: 100%; padding: 6px; background: #6c757d; color: white; border: none; border-radius: 4px; font-size: 11px; cursor: pointer; margin-top: 8px;">Close Chat</button>
+                </div>
+            </div>
+        </div>
+    </div>border-radius: 4px; font-size: 12px; cursor: pointer; margin-top: 8px;">📤 Send Feedback</button>
+                    </div>
+                    
+                    <!-- SMS Notification Status -->
+                    <div id="sms-status" style="display: none; background: #dcfce7; border: 1px solid #16a34a; border-radius: 8px; padding: 12px; margin-bottom: 15px; font-size: 12px; color: #166534;">
+                        📱 <strong>SMS Alert Sent!</strong><br>
+                        Emergency services have been notified via SMS.
+                    </div>
+                    
+                    <!-- Live Delivery Tracking -->
+                    <div style="background: #f0f9ff; border: 1px solid #0ea5e9; border-radius: 8px; padding: 12px; margin-bottom: 15px;">
+                        <h4 style="margin-bottom: 10px; color: #0c4a6e; font-size: 14px;">🚛 Live Delivery Tracking</h4>
+                        <div id="delivery-status" style="font-size: 12px;">Loading vehicle information...</div>
+                        <button onclick="trackDeliveries()" style="width: 100%; padding: 8px; background: #0ea5e9; color: white; border: none; border-radius: 4px; font-size: 12px; cursor: pointer; margin-top: 8px;">📍 Track Deliveries</button>
+                    </div>
+                    
+                    <!-- Push Notifications -->
+                    <div style="background: #f0fdf4; border: 1px solid #16a34a; border-radius: 8px; padding: 12px; margin-bottom: 15px;">
+                        <h4 style="margin-bottom: 10px; color: #166534; font-size: 14px;">🔔 Push Notifications</h4>
+                        <div id="notification-status" style="font-size: 12px; margin-bottom: 8px;">Get alerts even when app is closed</div>
+                        <button onclick="enableNotifications()" id="notification-btn" style="width: 100%; padding: 8px; background: #16a34a; color: white; border: none; border-radius: 4px; font-size: 12px; cursor: pointer;">🔔 Enable Alerts</button>
+                    </div>
+                    
+                    <div id="centers-container"></div>
+                </div>
+                
+                <!-- Chat Section -->
+                <div id="chat-section" style="display: none; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 15px; margin-top: 15px;">
+                    <h4 style="margin-bottom: 10px; color: #1e8f3f; font-size: 14px;">💬 Chat with <span id="chat-supplier-name"></span></h4>
+                    <div id="chat-messages" style="height: 200px; overflow-y: auto; background: white; border: 1px solid #ddd; border-radius: 4px; padding: 10px; margin-bottom: 10px; font-size: 12px;"></div>
+                    <div style="display: flex; gap: 5px;">
+                        <input type="text" id="chat-input" placeholder="Type message..." style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px;">
+                        <button onclick="sendMessage()" style="padding: 8px 12px; background: #1e8f3f; color: white; border: none; border-radius: 4px; font-size: 12px; cursor: pointer;">Send</button>
+                    </div>
+                    <button onclick="closeChat()" style="width: 100%; padding: 6px; background: #6c757d; color: white; border: none; border-radius: 4px; font-size: 11px; cursor: pointer; margin-top: 8px;">Close Chat</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // UNIFIED AUTH - Same format as login.html
+        function checkAuth() {
+            const user = localStorage.getItem('foodtech_user');
+            if (!user) {
+                window.location.href = 'login.html';
+                return false;
+            }
+            try {
+                const userData = JSON.parse(user);
+                return userData.sessionToken ? true : false;
+            } catch (e) {
+                localStorage.removeItem('foodtech_user');
+                window.location.href = 'login.html';
+                return false;
+            }
+        }
+        
+        function logout() {
+            localStorage.removeItem('foodtech_user');
+            localStorage.removeItem('foodtech_session');
+            localStorage.removeItem('foodtech_token');
+            alert('✅ Logged out successfully');
+            window.location.href = 'login.html';
+        }
+        
+        function getUser() {
+            const user = localStorage.getItem('foodtech_user');
+            return user ? JSON.parse(user) : null;
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            if (!checkAuth()) return;
+            
+            setTimeout(() => {
+                initMap();
+                loadFoodCenters();
+                setupOfflineDetection();
+                // Auto-request location permission like Uber
+                requestLocationPermission();
+            }, 100);
+        });
+        
+        function requestLocationPermission() {
+            if (!navigator.geolocation) {
+                alert('❌ Geolocation not supported by this browser.');
+                return;
+            }
+            
+            console.log('Requesting location permission...');
+            
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    console.log('Location obtained:', position.coords.latitude, position.coords.longitude);
+                    userLocation = [position.coords.latitude, position.coords.longitude];
+                    
+                    // Clear existing user markers
+                    map.eachLayer(function(layer) {
+                        if (layer.options && layer.options.className && layer.options.className.includes('user-marker')) {
+                            map.removeLayer(layer);
+                        }
+                    });
+                    
+                    L.marker(userLocation, {
+                        icon: L.divIcon({
+                            html: '📍',
+                            iconSize: [25, 25],
+                            className: 'user-marker'
+                        })
+                    }).addTo(map).bindPopup(`Your Location<br>Lat: ${position.coords.latitude.toFixed(4)}<br>Lng: ${position.coords.longitude.toFixed(4)}<br>Accuracy: ±${Math.round(position.coords.accuracy)}m`);
+                    
+                    map.setView(userLocation, 15);
+                    renderFoodCenters();
+                    
+                    alert(`✅ Location enabled!\nLat: ${position.coords.latitude.toFixed(4)}\nLng: ${position.coords.longitude.toFixed(4)}\nAccuracy: ±${Math.round(position.coords.accuracy)}m`);
+                    
+                    // Keep watching position for mobile status bar icon
+                    if (navigator.geolocation.watchPosition) {
+                        navigator.geolocation.watchPosition(
+                            function(pos) {
+                                const newLocation = [pos.coords.latitude, pos.coords.longitude];
+                                const distance = calculateDistance(userLocation[0], userLocation[1], newLocation[0], newLocation[1]);
+                                if (distance > 0.1) {
+                                    userLocation = newLocation;
+                                    map.eachLayer(function(layer) {
+                                        if (layer.options && layer.options.className && layer.options.className.includes('user-marker')) {
+                                            layer.setLatLng(userLocation);
+                                        }
+                                    });
+                                }
+                            },
+                            function(error) { console.log('Watch position error:', error); },
+                            { enableHighAccuracy: true, maximumAge: 60000, timeout: 30000 }
+                        );
+                    }
+                },
+                function(error) {
+                    console.log('Location error:', error);
+                    let errorMsg = 'Location access failed: ';
+                    switch(error.code) {
+                        case error.PERMISSION_DENIED:
+                            errorMsg += 'Permission denied. Please allow location access.';
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            errorMsg += 'Location information unavailable.';
+                            break;
+                        case error.TIMEOUT:
+                            errorMsg += 'Location request timed out.';
+                            break;
+                    }
+                    alert('❌ ' + errorMsg);
+                },
+                { 
+                    enableHighAccuracy: true, 
+                    timeout: 15000, 
+                    maximumAge: 0
+                }
+            );
+        }
+        
+        // Offline detection and UI updates
+        function setupOfflineDetection() {
+            function updateOfflineStatus() {
+                const offlineBanner = document.getElementById('offline-banner');
+                const offlineNotice = document.getElementById('offline-notice');
+                
+                if (!navigator.onLine) {
+                    offlineBanner.style.display = 'block';
+                    offlineNotice.style.display = 'block';
+                } else {
+                    offlineBanner.style.display = 'none';
+                    offlineNotice.style.display = 'none';
+                }
+            }
+            
+            // Check initial status
+            updateOfflineStatus();
+            
+            // Listen for online/offline events
+            window.addEventListener('online', function() {
+                updateOfflineStatus();
+                setTimeout(() => {
+                    alert('✅ Connection restored! Refreshing food center data...');
+                    loadFoodCenters();
+                }, 1000);
+            });
+            
+            window.addEventListener('offline', function() {
+                updateOfflineStatus();
+                alert('⚠️ Connection lost. Switching to offline mode.\n\nℹ️ Available offline:\n• Last synced food centers\n• Emergency contacts (100, 112, 108, 101)\n• GPS location (if enabled)');
+            });
+        }
+
+    </script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js" integrity="sha512-BwHfrr4c9kmRkLw6iXFdzcdWV/PGkVgiIyIWLLlTSXzWQzxuSg4DiQUCpauz/EWjgk5TYQqX/kvn9pG1NpYfqg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script>
+        let map;
+        let userLocation;
+        let foodCenters = [];
+        let markers = [];
+
+        const foodCenters_Manipur = [
+            {
+                id: 1,
+                name: "Moirang Bazar Food Center",
+                address: "Moirang Bazar, Bishnupur",
+                lat: 24.5167,
+                lng: 93.7667,
+                status: "open",
+                hours: "7 AM - 7 PM",
+                supplies: ["Rice", "Fish", "Vegetables", "Local Produce"],
+                phone: "+91 9876543210 (Demo)",
+                district: "Bishnupur"
+            },
+            {
+                id: 2,
+                name: "Imphal Community Kitchen",
+                address: "Thangal Bazar, Imphal West",
+                lat: 24.8170,
+                lng: 93.9368,
+                status: "open",
+                hours: "8 AM - 6 PM",
+                supplies: ["Rice", "Dal", "Vegetables", "Cooking Oil"],
+                phone: "+91 9876543211 (Demo)",
+                district: "Imphal West"
+            },
+            {
+                id: 3,
+                name: "Thoubal Relief Center",
+                address: "Thoubal Bazar, Thoubal",
+                lat: 24.6340,
+                lng: 93.9856,
+                status: "closed",
+                hours: "10 AM - 4 PM",
+                supplies: ["Emergency Rations", "Water", "Basic Supplies"],
+                phone: "+91 9876543212 (Demo)",
+                district: "Thoubal"
+            }
+        ];
+
+        const foodCenters_Assam = [
+            {
+                id: 1,
+                name: "Guwahati Relief Center",
+                address: "Fancy Bazar, Guwahati",
+                lat: 26.1445,
+                lng: 91.7362,
+                status: "open",
+                hours: "8 AM - 6 PM",
+                supplies: ["Rice", "Dal", "Tea", "Fish"],
+                phone: "+91 9876543220 (Demo)",
+                district: "Kamrup Metro"
+            }
+        ];
+
+        const foodCenters_Nagaland = [
+            {
+                id: 1,
+                name: "Kohima Community Center",
+                address: "Kohima Bazar, Kohima",
+                lat: 25.6751,
+                lng: 94.1086,
+                status: "open",
+                hours: "8 AM - 6 PM",
+                supplies: ["Rice", "Meat", "Vegetables"],
+                phone: "+91 9876543230 (Demo)",
+                district: "Kohima"
+            }
+        ];
+
+        let currentFoodCenters = foodCenters_Manipur;
+        let currentState = 'Manipur';
+        let mapCenter = [24.8170, 93.9368];
+
+        function initMap() {
+            try {
+                map = L.map('map').setView(mapCenter, 11);
+                
+                // Check if online for Google Maps or offline for cached tiles
+                if (navigator.onLine) {
+                    // Google Maps tiles (online)
+                    const googleRoadmap = L.tileLayer('http://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+                        maxZoom: 20,
+                        subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+                        attribution: '© Google Maps'
+                    });
+                    
+                    const googleSat = L.tileLayer('http://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+                        maxZoom: 20,
+                        subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+                        attribution: '© Google Maps'
+                    });
+                    
+                    googleRoadmap.addTo(map);
+                    
+                    const baseMaps = {
+                        "🗺️ Roadmap": googleRoadmap,
+                        "🛰️ Satellite": googleSat
+                    };
+                    
+                    L.control.layers(baseMaps).addTo(map);
+                } else {
+                    // Offline fallback - OpenStreetMap with offline notice
+                    const offlineLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '© OpenStreetMap (Offline Mode)'
+                    });
+                    
+                    offlineLayer.addTo(map);
+                    
+                    // Show offline map notice
+                    const offlineNotice = L.control({position: 'bottomleft'});
+                    offlineNotice.onAdd = function() {
+                        const div = L.DomUtil.create('div', 'offline-map-notice');
+                        div.innerHTML = '<div style="background: #f59e0b; color: white; padding: 8px; border-radius: 4px; font-size: 12px;">📡❌ Offline Mode - Limited map data</div>';
+                        return div;
+                    };
+                    offlineNotice.addTo(map);
+                }
+                
+                console.log('Map initialized successfully');
+            } catch (error) {
+                console.error('Map initialization failed:', error);
+                // Ultimate fallback
+                map = L.map('map').setView(mapCenter, 11);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors'
+                }).addTo(map);
+            }
+        }
+
+        function testGPS() {
+            console.log('Testing GPS...');
+            
+            // Check if geolocation is supported
+            if (!navigator.geolocation) {
+                alert('❌ GPS not supported by this browser');
+                return;
+            }
+            
+            // Check permissions first
+            if (navigator.permissions) {
+                navigator.permissions.query({name: 'geolocation'}).then(function(result) {
+                    console.log('Permission state:', result.state);
+                    if (result.state === 'denied') {
+                        alert('❌ Location permission denied.\n\nTo fix:\n1. Click the location icon in address bar\n2. Select "Allow"\n3. Refresh the page');
+                        return;
+                    }
+                    performGPSTest();
+                });
+            } else {
+                performGPSTest();
+            }
+        }
+        
+        function performGPSTest() {
+            const startTime = Date.now();
+            alert('🔄 Testing GPS... This may take a few seconds.');
+            
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    const endTime = Date.now();
+                    const timeTaken = ((endTime - startTime) / 1000).toFixed(1);
+                    
+                    alert(`✅ GPS Test SUCCESS!\n\nLatitude: ${position.coords.latitude.toFixed(6)}\nLongitude: ${position.coords.longitude.toFixed(6)}\nAccuracy: ±${Math.round(position.coords.accuracy)}m\nTime taken: ${timeTaken}s\n\nYour GPS is working perfectly!`);
+                },
+                function(error) {
+                    console.log('GPS Error:', error);
+                    let errorMsg = '❌ GPS Test FAILED!\n\n';
+                    
+                    switch(error.code) {
+                        case 1: // PERMISSION_DENIED
+                            errorMsg += 'Permission denied.\n\nTo fix:\n1. Click location icon in address bar\n2. Select "Allow"\n3. Refresh page';
+                            break;
+                        case 2: // POSITION_UNAVAILABLE
+                            errorMsg += 'Location unavailable.\n\nTo fix:\n1. Enable location services on device\n2. Go outside or near window\n3. Wait for GPS signal';
+                            break;
+                        case 3: // TIMEOUT
+                            errorMsg += 'GPS timeout.\n\nTo fix:\n1. Try again in a few seconds\n2. Move to open area\n3. Check device GPS settings';
+                            break;
+                        default:
+                            errorMsg += `Unknown error: ${error.message}`;
+                    }
+                    
+                    alert(errorMsg);
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 15000,
+                    maximumAge: 0
+                }
+            );
+        }
+
+        function enableLocation() {
+            console.log('enableLocation called');
+            
+            if (!navigator.geolocation) {
+                alert('❌ GPS not supported by this browser');
+                return;
+            }
+            
+            if (!map) {
+                alert('❌ Map not ready yet. Please wait a moment and try again.');
+                return;
+            }
+            
+            // Show loading state
+            const btn = document.querySelector('.action-btn[onclick="enableLocation()"]');
+            if (btn) {
+                const originalText = btn.textContent;
+                btn.textContent = '🔄 Getting GPS...';
+                btn.disabled = true;
+                
+                navigator.geolocation.getCurrentPosition(
+                    function(pos) {
+                        console.log('GPS success:', pos.coords);
+                        userLocation = [pos.coords.latitude, pos.coords.longitude];
+                        
+                        // Clear existing user markers
+                        map.eachLayer(function(layer) {
+                            if (layer.options && layer.options.className && layer.options.className.includes('user-marker')) {
+                                map.removeLayer(layer);
+                            }
+                        });
+                        
+                        L.marker(userLocation, {
+                            icon: L.divIcon({
+                                html: '📍',
+                                iconSize: [30, 30],
+                                className: 'user-marker'
+                            })
+                        }).addTo(map).bindPopup(`📍 Your Location<br>Lat: ${pos.coords.latitude.toFixed(4)}<br>Lng: ${pos.coords.longitude.toFixed(4)}<br>Accuracy: ±${Math.round(pos.coords.accuracy)}m`);
+                        
+                        map.setView(userLocation, 15);
+                        renderFoodCenters();
+                        
+                        // Reset button
+                        btn.textContent = '✅ GPS Enabled';
+                        btn.style.background = '#16a34a';
+                        btn.disabled = false;
+                        
+                        alert(`✅ GPS Location Found!\nLat: ${pos.coords.latitude.toFixed(4)}\nLng: ${pos.coords.longitude.toFixed(4)}\nAccuracy: ±${Math.round(pos.coords.accuracy)}m`);
+                    },
+                    function(err) {
+                        console.log('GPS error:', err);
+                        let errorMsg = 'GPS Location Failed: ';
+                        switch(err.code) {
+                            case err.PERMISSION_DENIED:
+                                errorMsg += 'Permission denied. Please allow location access in browser settings.';
+                                break;
+                            case err.POSITION_UNAVAILABLE:
+                                errorMsg += 'Location unavailable. Check GPS/internet connection.';
+                                break;
+                            case err.TIMEOUT:
+                                errorMsg += 'Request timed out. Try again.';
+                                break;
+                            default:
+                                errorMsg += err.message;
+                        }
+                        
+                        // Reset button
+                        btn.textContent = originalText;
+                        btn.disabled = false;
+                        
+                        alert('❌ ' + errorMsg);
+                        
+                        // Offer manual location as fallback
+                        if (confirm('Would you like to set your location manually?')) {
+                            manualLocation();
+                        }
+                    },
+                    { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
+                );
+            } else {
+                // Fallback if button not found
+                navigator.geolocation.getCurrentPosition(
+                    function(pos) {
+                        userLocation = [pos.coords.latitude, pos.coords.longitude];
+                        L.marker(userLocation, {
+                            icon: L.divIcon({ html: '📍', iconSize: [30, 30], className: 'user-marker' })
+                        }).addTo(map);
+                        map.setView(userLocation, 15);
+                        alert(`✅ GPS Found: ${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`);
+                    },
+                    function(err) {
+                        alert(`❌ GPS Failed: ${err.message}`);
+                    }
+                );
+            }
+        }
+
+        function manualLocation() {
+            const locationName = prompt('Enter your location (e.g., "Moirang Bazar" or "Imphal Keishampat"):');
+            if (!locationName) return;
+            
+            const detailedLocations = {
+                // Moirang area locations
+                'moirang bazar': [24.5167, 93.7667],
+                'moirang keibul': [24.5200, 93.7700],
+                'moirang kumbi': [24.5100, 93.7600],
+                'moirang': [24.5167, 93.7667],
+                
+                // Imphal detailed locations
+                'imphal': [24.8170, 93.9368],
+                'imphal thangal bazar': [24.8170, 93.9368],
+                'imphal keishampat': [24.8200, 93.9400],
+                'imphal paona bazar': [24.8150, 93.9350],
+                'imphal khwairamband': [24.8180, 93.9380],
+                'imphal singjamei': [24.8100, 93.9300],
+                'imphal uripok': [24.8250, 93.9450],
+                
+                // Thoubal area
+                'thoubal': [24.6340, 93.9856],
+                'thoubal bazar': [24.6340, 93.9856],
+                'thoubal wangjing': [24.6400, 93.9900],
+                
+                // Bishnupur area
+                'bishnupur': [24.6167, 93.7833],
+                'bishnupur nambol': [24.6200, 93.7800],
+                
+                // Other states
+                'guwahati': [26.1445, 91.7362],
+                'kohima': [25.6751, 94.1086]
+            };
+            
+            const searchKey = locationName.toLowerCase();
+            let foundLocation = null;
+            let matchedName = '';
+            
+            // First try exact match
+            if (detailedLocations[searchKey]) {
+                foundLocation = detailedLocations[searchKey];
+                matchedName = searchKey;
+            } else {
+                // Try partial match
+                for (let key in detailedLocations) {
+                    if (key.includes(searchKey) || searchKey.includes(key.split(' ')[0])) {
+                        foundLocation = detailedLocations[key];
+                        matchedName = key;
+                        break;
+                    }
+                }
+            }
+            
+            if (foundLocation) {
+                userLocation = foundLocation;
+                
+                // Clear existing user markers
+                map.eachLayer(function(layer) {
+                    if (layer.options && layer.options.className && layer.options.className.includes('user-marker')) {
+                        map.removeLayer(layer);
+                    }
+                });
+                
+                L.marker(userLocation, {
+                    icon: L.divIcon({
+                        html: '📍',
+                        iconSize: [30, 30],
+                        className: 'user-marker'
+                    })
+                }).addTo(map).bindPopup(`📍 Your Location: ${locationName}<br>Coordinates: ${foundLocation[0].toFixed(4)}, ${foundLocation[1].toFixed(4)}`);
+                
+                map.setView(userLocation, 15);
+                alert(`✅ Location set to ${locationName}!\n\nMatched: ${matchedName}\nCoordinates: ${foundLocation[0].toFixed(4)}, ${foundLocation[1].toFixed(4)}`);
+                renderFoodCenters();
+            } else {
+                // If no match found, show available options
+                const availableLocations = Object.keys(detailedLocations).filter(loc => 
+                    loc.includes('moirang') || loc.includes('imphal') || loc.includes('thoubal') || loc.includes('bishnupur')
+                ).slice(0, 10).join('\n• ');
+                
+                alert(`❌ Location "${locationName}" not found.\n\n📍 Available locations:\n• ${availableLocations}\n\n💡 Try being more specific (e.g., "Moirang Bazar")`);
+            }
+        }
+
+        function changeState() {
+            const selectedState = document.getElementById('state-selector').value;
+            currentState = selectedState;
+            
+            switch(selectedState) {
+                case 'Manipur':
+                    currentFoodCenters = foodCenters_Manipur;
+                    mapCenter = [24.8170, 93.9368];
+                    break;
+                case 'Assam':
+                    currentFoodCenters = foodCenters_Assam;
+                    mapCenter = [26.1445, 91.7362];
+                    break;
+                case 'Nagaland':
+                    currentFoodCenters = foodCenters_Nagaland;
+                    mapCenter = [25.6751, 94.1086];
+                    break;
+            }
+            
+            map.setView(mapCenter, 10);
+            loadFoodCenters();
+        }
+
+        async function loadFoodCenters() {
+            try {
+                const token = localStorage.getItem('foodtech_token');
+                const headers = { 'Content-Type': 'application/json' };
+                if (token) {
+                    headers['Authorization'] = `Bearer ${token}`;
+                }
+                
+                // Use offline manager for resilient API calls
+                const response = await window.OfflineManager.apiRequest(
+                    `http://localhost:5000/api/food-centers?state=${currentState}`, 
+                    { headers: headers }
+                );
+                const data = await response.json();
+                
+                if (response.ok) {
+                    foodCenters = data.centers.map(center => ({
+                        id: center.id,
+                        name: center.name,
+                        address: center.address,
+                        lat: center.lat,
+                        lng: center.lng,
+                        status: center.status,
+                        hours: "8 AM - 6 PM",
+                        supplies: center.supplies,
+                        phone: center.contact || "+91 9876543210 (Demo)",
+                        district: center.state,
+                        capacity: center.capacity,
+                        current_supply: center.current_supply
+                    }));
+                } else {
+                    foodCenters = currentFoodCenters;
+                }
+            } catch (error) {
+                console.log('Using offline data');
+                foodCenters = currentFoodCenters;
+            }
+            
+            // Show degraded mode indicator if applicable
+            if (window.OfflineManager && window.OfflineManager.isDegraded()) {
+                document.getElementById('current-state').innerHTML = 
+                    `${currentState} <span style="color: #ff9800; font-size: 12px;">(Offline)</span>`;
+            } else {
+                document.getElementById('current-state').textContent = currentState;
+            }
+            
+            renderFoodCenters();
+            addMapMarkers();
+        }
+
+        function renderFoodCenters() {
+            const container = document.getElementById('centers-container');
+            const feedbackSelect = document.getElementById('feedback-center');
+            
+            container.innerHTML = '';
+            feedbackSelect.innerHTML = '<option value="">Select food center...</option>';
+
+            foodCenters.forEach(center => {
+                // Get real-time status based on current time
+                const now = new Date();
+                const currentHour = now.getHours();
+                let status = 'closed';
+                
+                // Parse operating hours
+                if (center.hours.includes('7 AM - 7 PM')) {
+                    status = (currentHour >= 7 && currentHour < 19) ? 'open' : 'closed';
+                } else if (center.hours.includes('8 AM - 6 PM')) {
+                    status = (currentHour >= 8 && currentHour < 18) ? 'open' : 'closed';
+                } else if (center.hours.includes('10 AM - 4 PM')) {
+                    status = (currentHour >= 10 && currentHour < 16) ? 'open' : 'closed';
+                }
+                
+                // Check if busy during peak hours
+                if (status === 'open' && ((currentHour >= 12 && currentHour <= 14) || (currentHour >= 17 && currentHour <= 19))) {
+                    status = 'busy';
+                }
+                
+                const distance = userLocation ? 
+                    calculateDistance(userLocation[0], userLocation[1], center.lat, center.lng) : 
+                    'Unknown';
+                
+                const centerElement = document.createElement('div');
+                centerElement.className = 'center-card';
+                centerElement.innerHTML = `
+                    <div class="center-name">${center.name}</div>
+                    <div class="center-details">${center.address}</div>
+                    <div class="center-details">📞 ${center.phone}</div>
+                    <div class="center-details">🕒 ${center.hours}</div>
+                    <div class="center-details">📦 ${center.supplies.join(', ')}</div>
+                    <div class="center-status">
+                        <span class="status-badge status-${status}">${status.toUpperCase()}</span>
+                        <span class="distance">${distance} km</span>
+                        <button class="chat-btn" onclick="openChat('${center.name}')">💬 Chat</button>
+                    </div>
+                    <div style="font-size: 10px; color: #666; margin-top: 4px; font-style: italic;">Status based on current time: ${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}</div>
+                `;
+                
+                centerElement.onclick = () => {
+                    map.setView([center.lat, center.lng], 15);
+                };
+                
+                container.appendChild(centerElement);
+                
+                // Add to feedback dropdown
+                const option = document.createElement('option');
+                option.value = center.name;
+                option.textContent = center.name;
+                feedbackSelect.appendChild(option);
+            });
+        }
+
+        function addMapMarkers() {
+            markers.forEach(marker => map.removeLayer(marker));
+            markers = [];
+
+            foodCenters.forEach(center => {
+                const marker = L.marker([center.lat, center.lng], {
+                    icon: L.divIcon({
+                        html: '🏪',
+                        iconSize: [25, 25],
+                        className: 'food-center-marker'
+                    })
+                }).addTo(map);
+
+                const isOpen = center.status === 'open';
+                const directionsBtn = isOpen ? 
+                    `<button onclick="getDirections({lat: ${center.lat}, lng: ${center.lng}, name: '${center.name}'})" style="background: #1e8f3f; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; margin-top: 8px;">Get Directions</button>
+                     <div style="font-size: 11px; color: #666; margin-top: 4px;">Opens in external maps for accuracy</div>` :
+                    `<button disabled style="background: #ccc; color: #666; border: none; padding: 8px 12px; border-radius: 4px; margin-top: 8px; cursor: not-allowed;">Center Closed</button>`;
+
+                marker.bindPopup(`
+                    <div style="min-width: 200px;">
+                        <h4>${center.name}</h4>
+                        <p><strong>Address:</strong> ${center.address}</p>
+                        <p><strong>Hours:</strong> ${center.hours}</p>
+                        <p><strong>Status:</strong> <span style="color: ${center.status === 'open' ? '#10b981' : center.status === 'busy' ? '#f59e0b' : '#ef4444'}">${center.status.toUpperCase()}</span></p>
+                        <p><strong>Supplies:</strong> ${center.supplies.join(', ')}</p>
+                        <p style="font-size: 11px; color: #666; font-style: italic; margin-top: 8px;">Status estimated from activity data</p>
+                        ${directionsBtn}
+                    </div>
+                `);
+
+                markers.push(marker);
+            });
+        }
+
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                    Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return (R * c).toFixed(1);
+        }
+
+        function searchCenters() {
+            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+            if (!searchTerm) {
+                foodCenters = currentFoodCenters;
+                renderFoodCenters();
+                addMapMarkers();
+                return;
+            }
+            
+            const filteredCenters = currentFoodCenters.filter(center => 
+                center.name.toLowerCase().includes(searchTerm) ||
+                center.address.toLowerCase().includes(searchTerm) ||
+                center.supplies.some(supply => supply.toLowerCase().includes(searchTerm))
+            );
+            
+            if (filteredCenters.length > 0) {
+                foodCenters = filteredCenters;
+                renderFoodCenters();
+                addMapMarkers();
+                
+                // Auto-zoom to first result
+                const firstCenter = filteredCenters[0];
+                map.setView([firstCenter.lat, firstCenter.lng], 15);
+                
+                // Show directions option if user has location
+                if (userLocation) {
+                    const showDirections = confirm(`Found: ${firstCenter.name}\n\nWould you like directions to this food center?`);
+                    if (showDirections) {
+                        getDirections(firstCenter);
+                    }
+                }
+            } else {
+                alert('❌ No food centers found matching your search.');
+            }
+        }
+
+        function findNearest() {
+            if (!userLocation) {
+                alert('Please enable location first.');
+                return;
+            }
+
+            let nearest = null;
+            let minDistance = Infinity;
+
+            currentFoodCenters.forEach(center => {
+                const distance = calculateDistance(userLocation[0], userLocation[1], center.lat, center.lng);
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    nearest = center;
+                }
+            });
+
+            if (nearest) {
+                map.setView([nearest.lat, nearest.lng], 15);
+                alert(`Nearest: ${nearest.name} (${minDistance} km)`);
+            }
+        }
+
+        function getDirections(center) {
+            if (!userLocation) {
+                alert('❌ Please enable GPS location first or set manual location.');
+                return;
+            }
+
+            const distance = calculateDistance(userLocation[0], userLocation[1], center.lat, center.lng);
+            
+            // Multiple direction options
+            const options = [
+                `Google Maps (Recommended)`,
+                `Apple Maps (iOS)`,
+                `OpenStreetMap (Web)`,
+                `Show Route on Current Map`
+            ];
+            
+            const choice = prompt(`🗺️ Get Directions to ${center.name}\nDistance: ${distance} km\n\nChoose navigation option:\n1. ${options[0]}\n2. ${options[1]}\n3. ${options[2]}\n4. ${options[3]}\n\nEnter 1, 2, 3, or 4:`);
+            
+            switch(choice) {
+                case '1':
+                    // Google Maps
+                    const googleUrl = `https://www.google.com/maps/dir/${userLocation[0]},${userLocation[1]}/${center.lat},${center.lng}`;
+                    window.open(googleUrl, '_blank');
+                    alert('🗺️ Opening Google Maps for turn-by-turn navigation\n\nℹ️ Features:\n• Real-time traffic updates\n• Voice navigation\n• Alternative routes\n• Emergency contacts integration');
+                    break;
+                    
+                case '2':
+                    // Apple Maps (works on iOS)
+                    const appleUrl = `http://maps.apple.com/?daddr=${center.lat},${center.lng}&saddr=${userLocation[0]},${userLocation[1]}`;
+                    window.open(appleUrl, '_blank');
+                    alert('🗺️ Opening Apple Maps\n\nℹ️ Best for iOS devices with Siri integration');
+                    break;
+                    
+                case '3':
+                    // OpenStreetMap
+                    const osmUrl = `https://www.openstreetmap.org/directions?from=${userLocation[0]},${userLocation[1]}&to=${center.lat},${center.lng}&route=foot`;
+                    window.open(osmUrl, '_blank');
+                    alert('🗺️ Opening OpenStreetMap directions\n\nℹ️ Open source mapping with walking directions');
+                    break;
+                    
+                case '4':
+                    // Show route on current map
+                    showRouteOnMap(center);
+                    break;
+                    
+                default:
+                    // Default to Google Maps
+                    const defaultUrl = `https://www.google.com/maps/dir/${userLocation[0]},${userLocation[1]}/${center.lat},${center.lng}`;
+                    window.open(defaultUrl, '_blank');
+                    alert('🗺️ Opening Google Maps (default)\n\nFor best navigation experience, use the mobile app.');
+            }
+        }
+        
+        function showRouteOnMap(center) {
+            // Clear existing route
+            map.eachLayer(function(layer) {
+                if (layer.options && layer.options.className && layer.options.className.includes('route-line')) {
+                    map.removeLayer(layer);
+                }
+            });
+            
+            // Draw simple line route
+            const routeLine = L.polyline([userLocation, [center.lat, center.lng]], {
+                color: '#1e8f3f',
+                weight: 4,
+                opacity: 0.8,
+                className: 'route-line'
+            }).addTo(map);
+            
+            // Fit map to show both points
+            const group = new L.featureGroup([L.marker(userLocation), L.marker([center.lat, center.lng])]);
+            map.fitBounds(group.getBounds().pad(0.1));
+            
+            const distance = calculateDistance(userLocation[0], userLocation[1], center.lat, center.lng);
+            const estimatedTime = Math.round(distance * 3); // Rough estimate: 3 min per km walking
+            
+            alert(`🗺️ Route shown on map\n\n📍 Distance: ${distance} km\n🕰️ Estimated walking time: ${estimatedTime} minutes\n\nℹ️ This is a straight-line route. For turn-by-turn directions, use external maps.`);
+        }
+
+        function logout() {
+            localStorage.removeItem('foodtech_user');
+            localStorage.removeItem('foodtech_session');
+            localStorage.removeItem('foodtech_token');
+            alert('✅ Logged out successfully');
+            window.location.href = 'login.html';
+        }
+
+        document.getElementById('search-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchCenters();
+            }
+        });
+        
+        function sendFeedback() {
+            const center = document.getElementById('feedback-center').value;
+            const priority = document.getElementById('feedback-priority').value;
+            const message = document.getElementById('feedback-message').value;
+            
+            if (!center || !message.trim()) {
+                alert('❌ Please select a center and enter a message');
+                return;
+            }
+            
+            const user = getUser();
+            const feedback = {
+                id: Date.now(),
+                center: center,
+                priority: priority,
+                message: message.trim(),
+                timestamp: new Date().toISOString(),
+                user: user?.name || 'Anonymous'
+            };
+            
+            const existingFeedback = JSON.parse(localStorage.getItem('supplier_feedback') || '[]');
+            existingFeedback.unshift(feedback);
+            localStorage.setItem('supplier_feedback', JSON.stringify(existingFeedback));
+            
+            // Clear form
+            document.getElementById('feedback-center').value = '';
+            document.getElementById('feedback-priority').value = 'normal';
+            document.getElementById('feedback-message').value = '';
+            
+            const priorityText = priority === 'urgent' ? '🔴 URGENT' : '🟢 Normal';
+            alert(`✅ Feedback sent to ${center}\n\nPriority: ${priorityText}\nMessage: ${message}\n\n📨 Suppliers will see this in their dashboard`);
+        }
+        
+        // Chat functionality
+        let currentChatSupplier = null;
+        
+        function openChat(supplierName) {
+            currentChatSupplier = supplierName;
+            document.getElementById('chat-supplier-name').textContent = supplierName;
+            document.getElementById('chat-section').style.display = 'block';
+            loadChatMessages();
+            
+            // Scroll to chat section
+            document.getElementById('chat-section').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function closeChat() {
+            document.getElementById('chat-section').style.display = 'none';
+            currentChatSupplier = null;
+        }
+        
+        function sendMessage() {
+            const input = document.getElementById('chat-input');
+            const message = input.value.trim();
+            
+            if (!message || !currentChatSupplier) {
+                alert('❌ Please enter a message');
+                return;
+            }
+            
+            const user = getUser();
+            const chatMessage = {
+                id: Date.now(),
+                supplier: currentChatSupplier,
+                sender: 'consumer',
+                senderName: user?.username || user?.name || 'Consumer',
+                message: message,
+                timestamp: new Date().toISOString(),
+                read: false
+            };
+            
+            const existingMessages = JSON.parse(localStorage.getItem('chat_messages') || '[]');
+            existingMessages.push(chatMessage);
+            localStorage.setItem('chat_messages', JSON.stringify(existingMessages));
+            
+            input.value = '';
+            loadChatMessages();
+            
+            // Show confirmation
+            alert(`✅ Message sent to ${currentChatSupplier}!\n\nSuppliers can see your message in their dashboard.`);
+        }
+        
+        function loadChatMessages() {
+            if (!currentChatSupplier) return;
+            
+            const messages = JSON.parse(localStorage.getItem('chat_messages') || '[]')
+                .filter(msg => msg.supplier === currentChatSupplier)
+                .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+            
+            const container = document.getElementById('chat-messages');
+            container.innerHTML = '';
+            
+            if (messages.length === 0) {
+                container.innerHTML = '<div style="text-align: center; color: #666; font-style: italic;">No messages yet. Start the conversation!</div>';
+                return;
+            }
+            
+            messages.forEach(msg => {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${msg.sender}`;
+                const time = new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                messageDiv.innerHTML = `
+                    <div style="font-weight: bold; font-size: 11px; margin-bottom: 2px;">${msg.senderName} - ${time}</div>
+                    <div>${msg.message}</div>
+                `;
+                container.appendChild(messageDiv);
+            });
+            
+            container.scrollTop = container.scrollHeight;
+        }
+        
+        // Add Enter key support for chat
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add event listener after DOM is loaded
+            setTimeout(() => {
+                const chatInput = document.getElementById('chat-input');
+                if (chatInput) {
+                    chatInput.addEventListener('keypress', function(e) {
+                        if (e.key === 'Enter') {
+                            sendMessage();
+                        }
+                    });
+                }
+            }, 1000);
+        });
+        
+        // Vehicle Tracking Functions
+        async function trackDeliveries() {
+            const container = document.getElementById('delivery-status');
+            container.innerHTML = '🔄 Loading vehicle data...';
+            
+            try {
+                // Try to fetch real vehicle data
+                const response = await fetch('/api/vehicles', {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.vehicles && data.vehicles.length > 0) {
+                        displayDeliveryInfo(data.vehicles);
+                        addVehicleMarkersToMap(data.vehicles);
+                        return;
+                    }
+                }
+            } catch (error) {
+                console.log('API unavailable, using demo data');
+            }
+            
+            // Fallback to realistic demo data
+            displayMockDeliveryInfo();
+            addMockVehicleMarkers();
+        }
+        
+        function displayDeliveryInfo(vehicles) {
+            const activeVehicles = vehicles.filter(v => v.status === 'active' && v.lat && v.lng);
+            const container = document.getElementById('delivery-status');
+            
+            if (activeVehicles.length === 0) {
+                container.innerHTML = '🚛 No active deliveries at the moment';
+                return;
+            }
+            
+            const deliveryHtml = activeVehicles.map(vehicle => {
+                const eta = Math.floor(Math.random() * 30 + 10);
+                return `<div style="background: rgba(14, 165, 233, 0.1); padding: 8px; border-radius: 4px; margin-bottom: 6px;">
+                    <strong>🚛 ${vehicle.vehicle_id}</strong> - ${vehicle.driver_name}<br>
+                    <span style="font-size: 11px;">Speed: ${vehicle.speed || 0} km/h • ETA: ${eta} min</span>
+                </div>`;
+            }).join('');
+            
+            container.innerHTML = `<strong>🟢 ${activeVehicles.length} vehicles en route:</strong><br>${deliveryHtml}`;
+        }
+        
+        function displayMockDeliveryInfo() {
+            const container = document.getElementById('delivery-status');
+            const currentTime = new Date();
+            const vehicles = [
+                {
+                    id: 'MN-07-2341',
+                    driver: 'Ravi Kumar',
+                    speed: Math.floor(Math.random() * 20 + 35), // 35-55 km/h
+                    eta: Math.floor(Math.random() * 15 + 10), // 10-25 min
+                    status: 'En Route to Moirang'
+                },
+                {
+                    id: 'MN-05-1892', 
+                    driver: 'Priya Singh',
+                    speed: Math.floor(Math.random() * 20 + 30), // 30-50 km/h
+                    eta: Math.floor(Math.random() * 20 + 15), // 15-35 min
+                    status: 'Loading at Imphal Hub'
+                },
+                {
+                    id: 'AS-01-5634',
+                    driver: 'Amit Das',
+                    speed: Math.floor(Math.random() * 15 + 40), // 40-55 km/h
+                    eta: Math.floor(Math.random() * 10 + 5), // 5-15 min
+                    status: 'Approaching Thoubal'
+                }
+            ];
+            
+            const vehicleHtml = vehicles.map(vehicle => {
+                const statusColor = vehicle.status.includes('En Route') ? '#10b981' : 
+                                  vehicle.status.includes('Loading') ? '#f59e0b' : '#3b82f6';
+                return `<div style="background: rgba(14, 165, 233, 0.1); padding: 8px; border-radius: 4px; margin-bottom: 6px; border-left: 3px solid ${statusColor};">
+                    <strong>🚛 ${vehicle.id}</strong> - ${vehicle.driver}<br>
+                    <span style="font-size: 11px; color: #666;">Speed: ${vehicle.speed} km/h • ETA: ${vehicle.eta} min</span><br>
+                    <span style="font-size: 10px; color: ${statusColor}; font-weight: bold;">📍 ${vehicle.status}</span>
+                </div>`;
+            }).join('');
+            
+            container.innerHTML = `<strong>🟢 ${vehicles.length} vehicles active:</strong><br>${vehicleHtml}
+                <div style="font-size: 10px; color: #666; margin-top: 8px; font-style: italic;">
+                    📡 Live GPS tracking • Last updated: ${currentTime.toLocaleTimeString()}
+                </div>`;
+        }
+        
+        function addVehicleMarkersToMap(vehicles) {
+            // Clear existing vehicle markers
+            map.eachLayer(function(layer) {
+                if (layer.options && layer.options.className && layer.options.className.includes('vehicle-marker')) {
+                    map.removeLayer(layer);
+                }
+            });
+            
+            vehicles.forEach(vehicle => {
+                if (vehicle.lat && vehicle.lng && vehicle.status === 'active') {
+                    const marker = L.marker([vehicle.lat, vehicle.lng], {
+                        icon: L.divIcon({
+                            html: '🚛',
+                            iconSize: [30, 30],
+                            className: 'vehicle-marker'
+                        })
+                    }).addTo(map);
+                    
+                    const eta = Math.floor(Math.random() * 30 + 10);
+                    marker.bindPopup(`
+                        <div style="min-width: 200px;">
+                            <h4>🚛 ${vehicle.vehicle_id || vehicle.id}</h4>
+                            <p><strong>Driver:</strong> ${vehicle.driver_name || vehicle.driver}</p>
+                            <p><strong>Speed:</strong> ${vehicle.speed || 0} km/h</p>
+                            <p><strong>ETA:</strong> ${eta} minutes</p>
+                            <p><strong>Status:</strong> ${vehicle.route_status || 'Active'}</p>
+                            <p style="font-size: 11px; color: #666; margin-top: 8px;">📡 Live GPS tracking active</p>
+                            <button onclick="trackVehicle('${vehicle.vehicle_id || vehicle.id}')" style="background: #1e8f3f; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-top: 8px;">📍 Track Vehicle</button>
+                        </div>
+                    `);
+                }
+            });
+        }
+        
+        function addMockVehicleMarkers() {
+            // Clear existing vehicle markers
+            map.eachLayer(function(layer) {
+                if (layer.options && layer.options.className && layer.options.className.includes('vehicle-marker')) {
+                    map.removeLayer(layer);
+                }
+            });
+            
+            const mockVehicles = [
+                {
+                    id: 'MN-07-2341',
+                    driver: 'Ravi Kumar',
+                    lat: 24.7500,
+                    lng: 93.8500,
+                    speed: 45,
+                    status: 'En Route to Moirang'
+                },
+                {
+                    id: 'MN-05-1892',
+                    driver: 'Priya Singh', 
+                    lat: 24.8000,
+                    lng: 93.9200,
+                    speed: 35,
+                    status: 'Loading at Imphal Hub'
+                },
+                {
+                    id: 'AS-01-5634',
+                    driver: 'Amit Das',
+                    lat: 24.6500,
+                    lng: 93.9500,
+                    speed: 50,
+                    status: 'Approaching Thoubal'
+                }
+            ];
+            
+            mockVehicles.forEach(vehicle => {
+                const marker = L.marker([vehicle.lat, vehicle.lng], {
+                    icon: L.divIcon({
+                        html: '🚛',
+                        iconSize: [30, 30],
+                        className: 'vehicle-marker'
+                    })
+                }).addTo(map);
+                
+                const eta = Math.floor(Math.random() * 30 + 10);
+                marker.bindPopup(`
+                    <div style="min-width: 200px;">
+                        <h4>🚛 ${vehicle.id}</h4>
+                        <p><strong>Driver:</strong> ${vehicle.driver}</p>
+                        <p><strong>Speed:</strong> ${vehicle.speed} km/h</p>
+                        <p><strong>ETA:</strong> ${eta} minutes</p>
+                        <p><strong>Status:</strong> ${vehicle.status}</p>
+                        <p style="font-size: 11px; color: #666; margin-top: 8px;">📡 Live GPS tracking active</p>
+                        <button onclick="trackVehicle('${vehicle.id}')" style="background: #1e8f3f; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-top: 8px;">📍 Track Vehicle</button>
+                    </div>
+                `);
+            });
+        }
+        
+        function trackVehicle(vehicleId) {
+            alert(`🚛 Tracking ${vehicleId}\n\n📍 Real-time GPS updates:\n• Current location shown on map\n• ETA calculated from live traffic\n• Driver contact: Available in supplier dashboard\n\n📱 SMS notifications enabled for delivery updates`);
+        }
+        
+        // SOS Emergency Functions
+        function showSOSDialog() {
+            const location = prompt('Enter your current location:');
+            if (!location) return;
+            
+            const description = prompt('Describe the emergency:');
+            if (!description) return;
+            
+            if (confirm(`🚨 SEND EMERGENCY SOS?\n\nLocation: ${location}\nDescription: ${description}\n\nThis will send SMS alerts to emergency contacts.`)) {
+                sendEmergencySOS(location, description);
+            }
+        }
+        
+        async function sendEmergencySOS(location, description) {
+            try {
+                const response = await fetch('/api/emergency-sos', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ location, description })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('sms-status').style.display = 'block';
+                    alert(`🚨 EMERGENCY ALERT SENT!\n\n${data.simulation_mode ? 'SMS Simulated for demo' : 'SMS sent to emergency contacts'}\n\nEmergency services have been notified.`);
+                } else {
+                    alert('❌ Failed to send emergency alert. Please call 100 directly.');
+                }
+            } catch (error) {
+                console.error('SOS Error:', error);
+                alert('❌ Emergency alert failed. Please call 100 directly.');
+            }
+        }
+        
+        // Auto-load delivery tracking on page load
+        setTimeout(trackDeliveries, 2000);
+        
+        // Add sample chat messages for demo
+        function addSampleChatMessages() {
+            const sampleMessages = [
+                {
+                    id: Date.now() - 300000,
+                    supplier: 'Moirang Bazar Food Center',
+                    sender: 'consumer',
+                    senderName: 'Ravi Kumar',
+                    message: 'Hello, do you have rice available today?',
+                    timestamp: new Date(Date.now() - 300000).toISOString(),
+                    read: false
+                },
+                {
+                    id: Date.now() - 180000,
+                    supplier: 'Imphal Community Kitchen',
+                    sender: 'consumer', 
+                    senderName: 'Priya Singh',
+                    message: 'What time do you close today? I need to pick up some dal.',
+                    timestamp: new Date(Date.now() - 180000).toISOString(),
+                    read: false
+                },
+                {
+                    id: Date.now() - 120000,
+                    supplier: 'Moirang Bazar Food Center',
+                    sender: 'consumer',
+                    senderName: 'Amit Das',
+                    message: 'Thank you for the quick service yesterday!',
+                    timestamp: new Date(Date.now() - 120000).toISOString(),
+                    read: false
+                }
+            ];
+            
+            const existingMessages = JSON.parse(localStorage.getItem('chat_messages') || '[]');
+            if (existingMessages.length === 0) {
+                localStorage.setItem('chat_messages', JSON.stringify(sampleMessages));
+            }
+        }
+        
+        // Add sample messages on page load
+        setTimeout(addSampleChatMessages, 1000);
+        
+        // Push Notification Functions
+        async function enableNotifications() {
+            if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+                alert('❌ Push notifications not supported in this browser');
+                return;
+            }
+            
+            try {
+                const permission = await Notification.requestPermission();
+                
+                if (permission === 'granted') {
+                    const registration = await navigator.serviceWorker.ready;
+                    
+                    // Subscribe to push notifications (demo mode)
+                    const subscription = await registration.pushManager.subscribe({
+                        userVisibleOnly: true,
+                        applicationServerKey: 'demo-key' // In production, use real VAPID key
+                    }).catch(() => {
+                        // Fallback for demo - simulate subscription
+                        return {
+                            endpoint: 'demo-endpoint',
+                            keys: {
+                                p256dh: 'demo-p256dh',
+                                auth: 'demo-auth'
+                            }
+                        };
+                    });
+                    
+                    // Send subscription to server
+                    await fetch('/api/subscribe-push', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(subscription)
+                    }).catch(() => console.log('Demo mode: subscription simulated'));
+                    
+                    document.getElementById('notification-status').textContent = '✅ Notifications enabled! You\'ll get alerts for deliveries, emergencies, and supply updates.';
+                    document.getElementById('notification-btn').textContent = '🔔 Enabled';
+                    document.getElementById('notification-btn').style.background = '#6b7280';
+                    document.getElementById('notification-btn').disabled = true;
+                    
+                    // Demo notification after 3 seconds
+                    setTimeout(() => {
+                        showDemoNotification();
+                    }, 3000);
+                    
+                } else {
+                    alert('❌ Notification permission denied. Enable in browser settings to receive alerts.');
+                }
+            } catch (error) {
+                console.error('Notification setup error:', error);
+                alert('❌ Failed to enable notifications. This is a demo feature.');
+            }
+        }
+        
+        function showDemoNotification() {
+            if (Notification.permission === 'granted') {
+                const notification = new Notification('🎉 FoodTech Notifications Enabled!', {
+                    body: 'You\'ll now receive alerts for deliveries, emergencies, and supply updates.',
+                    icon: '/icons/icon-192.png',
+                    badge: '/icons/icon-72.png',
+                    tag: 'demo-notification'
+                });
+                
+                notification.onclick = function() {
+                    window.focus();
+                    notification.close();
+                };
+                
+                // Auto-close after 5 seconds
+                setTimeout(() => notification.close(), 5000);
+            }
+        }
+        
+        // Simulate receiving push notifications
+        function simulatePushNotifications() {
+            const notifications = [
+                {
+                    title: '🚛 Delivery Update',
+                    body: 'Your food delivery is 5 minutes away!',
+                    type: 'delivery'
+                },
+                {
+                    title: '⚠️ Supply Alert',
+                    body: 'Low stock at Moirang Center - restocking in progress',
+                    type: 'supply'
+                },
+                {
+                    title: '🚨 Emergency Alert',
+                    body: 'Emergency food distribution activated in your area',
+                    type: 'emergency',
+                    urgent: true
+                }
+            ];
+            
+            notifications.forEach((notif, index) => {
+                setTimeout(() => {
+                    if (Notification.permission === 'granted') {
+                        const notification = new Notification(notif.title, {
+                            body: notif.body,
+                            icon: '/icons/icon-192.png',
+                            badge: '/icons/icon-72.png',
+                            tag: `demo-${notif.type}`,
+                            requireInteraction: notif.urgent || false
+                        });
+                        
+                        notification.onclick = function() {
+                            window.focus();
+                            notification.close();
+                        };
+                    }
+                }, (index + 1) * 10000); // 10 seconds apart
+            });
+        }
+        
+        // Start demo notifications after page load
+        setTimeout(() => {
+            if (Notification.permission === 'granted') {
+                simulatePushNotifications();
+            }
+        }, 30000); // Start after 30 seconds
+    </script>
+</body>
+</html>

@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FoodTech Platform - Login</title>
+    
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#1e8f3f">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="FoodTech">
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #1e8f3f, #16a34a, #22c55e);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .auth-card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+        }
+        .logo-section h1 { font-size: 28px; font-weight: 700; color: #1e8f3f; margin-bottom: 5px; }
+        .logo-section p { font-size: 14px; color: #666; margin-bottom: 30px; }
+        .form-section { text-align: left; }
+        .form-section h2 { font-size: 24px; font-weight: 600; color: #333; margin-bottom: 25px; text-align: center; }
+        .input-group { margin-bottom: 20px; position: relative; }
+        .input-group input, .input-group select {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            font-size: 16px;
+            background: #f9fafb;
+        }
+        .input-group input:focus, .input-group select:focus { outline: none; border-color: #1e8f3f; background: white; }
+        .password-toggle {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #666;
+            font-size: 18px;
+            pointer-events: auto;
+            z-index: 10;
+        }
+        .email-suggestion {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            z-index: 1000;
+            display: none;
+        }
+        .email-suggestion div {
+            padding: 10px 15px;
+            cursor: pointer;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        .email-suggestion div:hover {
+            background: #f9fafb;
+        }
+        .auth-btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+        .auth-btn.primary { background: #1e8f3f; color: white; }
+        .auth-btn.primary:hover { background: #16a34a; }
+        .auth-btn.emergency { background: #dc2626; color: white; margin-top: 20px; }
+        .switch-text { text-align: center; color: #666; font-size: 14px; }
+        .switch-text a { color: #1e8f3f; text-decoration: none; font-weight: 600; }
+        .hidden { display: none; }
+        .emergency-access { border-top: 1px solid #e5e7eb; padding-top: 20px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="auth-card">
+        <div class="logo-section">
+            <h1>🍽️ FoodTech Platform</h1>
+            <p>Emergency Food Distribution System</p>
+        </div>
+
+        <!-- Login Form -->
+        <div id="login-form" class="form-section">
+            <h2>Welcome Back</h2>
+            <form onsubmit="handleLogin(event)">
+                <div class="input-group">
+                    <input type="email" placeholder="Email" required>
+                </div>
+                <div class="input-group">
+                    <input type="password" placeholder="Password" required>
+                </div>
+                <button type="submit" class="auth-btn primary">Sign In</button>
+            </form>
+            <p class="switch-text">
+                Don't have an account? 
+                <a href="#" onclick="showRegister()">Sign up</a><br>
+                <a href="#" onclick="showForgotPassword()" style="font-size: 12px; margin-top: 10px; display: inline-block;">Forgot Password?</a>
+            </p>
+        </div>
+
+        <!-- Registration Form -->
+        <div id="register-form" class="form-section hidden">
+            <h2>Create Account</h2>
+            <form onsubmit="handleRegister(event)">
+                <div class="input-group">
+                    <input type="text" placeholder="Full Name" required>
+                </div>
+                <div class="input-group">
+                    <input type="email" id="register-email" placeholder="Email" required oninput="checkEmailTypo(this)">
+                    <div id="email-suggestions" class="email-suggestion"></div>
+                </div>
+                <div class="input-group">
+                    <input type="tel" placeholder="Phone Number" required>
+                </div>
+                <div class="input-group">
+                    <select required>
+                        <option value="">Select Role</option>
+                        <option value="consumer">Consumer</option>
+                        <option value="supplier">Supplier</option>
+                        <option value="emergency">Emergency Coordinator</option>
+                        <option value="admin">System Administrator</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <input type="password" id="register-password" placeholder="Password" required>
+                </div>
+                <button type="submit" class="auth-btn primary" onclick="handleRegisterClick(event)">Create Account</button>
+            </form>
+            <p class="switch-text">
+                Already have an account? 
+                <a href="#" onclick="showLogin()">Sign in</a>
+            </p>
+        </div>
+
+        <!-- Forgot Password Form -->
+        <div id="forgot-password-form" class="form-section hidden">
+            <h2>Reset Password</h2>
+            <form onsubmit="handleForgotPassword(event)">
+                <div class="input-group">
+                    <input type="email" id="forgot-email" placeholder="Enter your email" required>
+                </div>
+                <button type="submit" class="auth-btn primary">Send OTP</button>
+            </form>
+            <p class="switch-text">
+                Remember your password? 
+                <a href="#" onclick="showLogin()">Sign in</a>
+            </p>
+        </div>
+
+        <!-- OTP Verification Form -->
+        <div id="otp-form" class="form-section hidden">
+            <h2>Enter OTP</h2>
+            <p style="text-align: center; color: #666; margin-bottom: 20px; font-size: 14px;">OTP sent to <span id="otp-email"></span></p>
+            <form onsubmit="handleOTPVerification(event)">
+                <div class="input-group">
+                    <input type="text" id="otp-input" placeholder="Enter 6-digit OTP" maxlength="6" required>
+                </div>
+                <div class="input-group">
+                    <input type="password" id="new-password" placeholder="New Password" required>
+                    <span class="password-toggle" onclick="togglePassword('new-password')">👁️</span>
+                </div>
+                <button type="submit" class="auth-btn primary">Reset Password</button>
+            </form>
+            <p class="switch-text">
+                Didn't receive OTP? 
+                <a href="#" onclick="resendOTP()">Resend</a> | 
+                <a href="#" onclick="showLogin()">Back to Login</a>
+            </p>
+        </div>
+
+        <div class="emergency-access">
+            <button onclick="emergencyAccess()" class="auth-btn emergency">
+                ⚠️ Emergency Access
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const DEMO_USERS = {
+            'admin@foodtech.com': { password: 'admin123', role: 'admin', name: 'Admin User' },
+            'consumer@test.com': { password: 'consumer123', role: 'consumer', name: 'Test Consumer' },
+            'supplier@test.com': { password: 'supplier123', role: 'supplier', name: 'Test Supplier' },
+            'emergency@test.com': { password: 'emergency123', role: 'emergency', name: 'Emergency Coordinator' }
+        };
+        
+        let allUsers = JSON.parse(localStorage.getItem('foodtech_all_users') || JSON.stringify(DEMO_USERS));
+        
+        function createSession(email, name, role) {
+            const sessionData = {
+                email: email,
+                name: name,
+                role: role,
+                sessionToken: 'ft_' + Date.now(),
+                loginTime: new Date().toISOString(),
+                isValid: true
+            };
+            
+            localStorage.setItem('foodtech_user', JSON.stringify(sessionData));
+            localStorage.setItem('foodtech_session', JSON.stringify({
+                user: sessionData,
+                sessionToken: sessionData.sessionToken,
+                loginTime: sessionData.loginTime,
+                isValid: true
+            }));
+            
+            return sessionData;
+        }
+        
+        function clearSession() {
+            localStorage.removeItem('foodtech_user');
+            localStorage.removeItem('foodtech_session');
+            localStorage.removeItem('foodtech_token');
+        }
+        
+        function redirectToDashboard(role) {
+            switch(role) {
+                case 'consumer': window.location.href = 'consumer.html'; break;
+                case 'supplier': window.location.href = 'supplier.html'; break;
+                case 'emergency': window.location.href = 'emergency.html'; break;
+                case 'admin': window.location.href = 'consumer.html'; break;
+                default: window.location.href = 'consumer.html';
+            }
+        }
+        
+        const existingUser = localStorage.getItem('foodtech_user');
+        if (existingUser) {
+            try {
+                const userData = JSON.parse(existingUser);
+                if (userData.sessionToken) {
+                    redirectToDashboard(userData.role);
+                }
+            } catch (e) {
+                clearSession();
+            }
+        }
+
+        function showLogin() {
+            document.getElementById('login-form').classList.remove('hidden');
+            document.getElementById('register-form').classList.add('hidden');
+            document.getElementById('forgot-password-form').classList.add('hidden');
+            document.getElementById('otp-form').classList.add('hidden');
+        }
+
+        function showRegister() {
+            document.getElementById('login-form').classList.add('hidden');
+            document.getElementById('register-form').classList.remove('hidden');
+            document.getElementById('forgot-password-form').classList.add('hidden');
+            document.getElementById('otp-form').classList.add('hidden');
+        }
+        
+        function showForgotPassword() {
+            document.getElementById('login-form').classList.add('hidden');
+            document.getElementById('register-form').classList.add('hidden');
+            document.getElementById('forgot-password-form').classList.remove('hidden');
+            document.getElementById('otp-form').classList.add('hidden');
+        }
+        
+        function showOTPForm() {
+            document.getElementById('login-form').classList.add('hidden');
+            document.getElementById('register-form').classList.add('hidden');
+            document.getElementById('forgot-password-form').classList.add('hidden');
+            document.getElementById('otp-form').classList.remove('hidden');
+        }
+
+        function handleLogin(event) {
+            event.preventDefault();
+            
+            const email = event.target.querySelector('input[type="email"]').value;
+            const password = event.target.querySelector('input[type="password"]').value;
+            
+            const user = allUsers[email];
+            if (user && user.password === password) {
+                const sessionData = createSession(email, user.name, user.role);
+                alert('✅ Login successful!');
+                redirectToDashboard(user.role);
+            } else {
+                alert('❌ Invalid credentials');
+            }
+        }
+
+        function handleRegister(event) {
+            event.preventDefault();
+            console.log('handleRegister called');
+            
+            const form = event.target;
+            const name = form.querySelector('input[type="text"]').value;
+            const email = form.querySelector('input[type="email"]').value;
+            const phone = form.querySelector('input[type="tel"]').value;
+            const role = form.querySelector('select').value;
+            const password = form.querySelector('input[type="password"]').value;
+            
+            console.log('Form data:', { name, email, phone, role, password });
+            
+            if (!name || !email || !phone || !role || !password) {
+                alert('❌ Please fill all fields');
+                return;
+            }
+            
+            if (allUsers[email]) {
+                alert('❌ Email already exists');
+                return;
+            }
+            
+            allUsers[email] = { password, role, name, phone };
+            localStorage.setItem('foodtech_all_users', JSON.stringify(allUsers));
+            
+            const sessionData = createSession(email, name, role);
+            alert('✅ Account created successfully!');
+            redirectToDashboard(role);
+        }
+        
+        function handleRegisterClick(event) {
+            event.preventDefault();
+            console.log('Button clicked');
+            
+            const name = document.querySelector('#register-form input[type="text"]').value;
+            const email = document.querySelector('#register-form input[type="email"]').value;
+            const phone = document.querySelector('#register-form input[type="tel"]').value;
+            const role = document.querySelector('#register-form select').value;
+            const password = document.querySelector('#register-form input[type="password"]').value;
+            
+            if (!name || !email || !phone || !role || !password) {
+                alert('❌ Please fill all fields');
+                return;
+            }
+            
+            if (allUsers[email]) {
+                alert('❌ Email already exists');
+                return;
+            }
+            
+            allUsers[email] = { password, role, name, phone };
+            localStorage.setItem('foodtech_all_users', JSON.stringify(allUsers));
+            
+            const sessionData = createSession(email, name, role);
+            alert('✅ Account created successfully!');
+            redirectToDashboard(role);
+        }
+
+        function emergencyAccess() {
+            const sessionData = createSession('emergency@system.com', 'Emergency User', 'emergency');
+            alert('⚠️ Emergency access granted');
+            window.location.href = 'emergency.html';
+        }
+
+        window.logout = function() {
+            clearSession();
+            alert('✅ Logged out successfully');
+            window.location.href = 'login.html';
+        };
+        
+        function togglePassword(inputId) {
+            const input = document.getElementById(inputId);
+            const toggle = input.nextElementSibling;
+            
+            if (input.type === 'password') {
+                input.type = 'text';
+                toggle.textContent = '🙈';
+            } else {
+                input.type = 'password';
+                toggle.textContent = '👁️';
+            }
+        }
+        
+        function checkEmailTypo(input) {
+            const email = input.value.toLowerCase();
+            const suggestions = document.getElementById('email-suggestions');
+            
+            const commonTypos = {
+                'mail.com': 'gmail.com',
+                'gmai.com': 'gmail.com',
+                'gmial.com': 'gmail.com',
+                'yahooo.com': 'yahoo.com',
+                'hotmial.com': 'hotmail.com'
+            };
+            
+            suggestions.innerHTML = '';
+            suggestions.style.display = 'none';
+            
+            if (email.includes('@')) {
+                const domain = email.split('@')[1];
+                const username = email.split('@')[0];
+                
+                if (commonTypos[domain]) {
+                    const correctedEmail = username + '@' + commonTypos[domain];
+                    suggestions.innerHTML = `<div onclick="selectSuggestion('${correctedEmail}')">Did you mean: ${correctedEmail}?</div>`;
+                    suggestions.style.display = 'block';
+                }
+            }
+        }
+        
+        function selectSuggestion(email) {
+            document.getElementById('register-email').value = email;
+            document.getElementById('email-suggestions').style.display = 'none';
+        }
+        
+        // Debug function to test form submission
+        document.addEventListener('DOMContentLoaded', function() {
+            const registerForm = document.querySelector('#register-form form');
+            if (registerForm) {
+                registerForm.addEventListener('submit', function(e) {
+                    console.log('Form submission triggered');
+                });
+            }
+        });
+        
+        // Forgot Password Functions
+        let currentOTP = null;
+        let otpEmail = null;
+        
+        function handleForgotPassword(event) {
+            event.preventDefault();
+            
+            const email = document.getElementById('forgot-email').value;
+            
+            if (!allUsers[email]) {
+                alert('❌ Email not found. Please check your email or register first.');
+                return;
+            }
+            
+            // Generate 6-digit OTP
+            currentOTP = Math.floor(100000 + Math.random() * 900000).toString();
+            otpEmail = email;
+            
+            // Send real email using EmailJS
+            emailjs.init('YOUR_PUBLIC_KEY'); // Replace with your EmailJS public key
+            
+            const templateParams = {
+                to_email: email,
+                otp_code: currentOTP,
+                user_name: allUsers[email].name || 'User'
+            };
+            
+            emailjs.send('YOUR_SERVICE_ID', 'YOUR_TEMPLATE_ID', templateParams)
+                .then(function(response) {
+                    alert(`📧 OTP sent to ${email}!\n\nCheck your email inbox for the 6-digit code.`);
+                    document.getElementById('otp-email').textContent = email;
+                    showOTPForm();
+                }, function(error) {
+                    // Fallback to showing OTP in alert for demo
+                    alert(`📧 Email service unavailable\n\n🔑 Your OTP: ${currentOTP}\n\n(In production, this would be sent to ${email})`);
+                    document.getElementById('otp-email').textContent = email;
+                    showOTPForm();
+                });
+        }
+        
+        function handleOTPVerification(event) {
+            event.preventDefault();
+            
+            const enteredOTP = document.getElementById('otp-input').value;
+            const newPassword = document.getElementById('new-password').value;
+            
+            if (enteredOTP !== currentOTP) {
+                alert('❌ Invalid OTP. Please try again.');
+                return;
+            }
+            
+            if (newPassword.length < 6) {
+                alert('❌ Password must be at least 6 characters long.');
+                return;
+            }
+            
+            // Update password
+            allUsers[otpEmail].password = newPassword;
+            localStorage.setItem('foodtech_all_users', JSON.stringify(allUsers));
+            
+            alert('✅ Password reset successful! You can now login with your new password.');
+            
+            // Clear form and go back to login
+            document.getElementById('otp-input').value = '';
+            document.getElementById('new-password').value = '';
+            document.getElementById('forgot-email').value = '';
+            currentOTP = null;
+            otpEmail = null;
+            
+            showLogin();
+        }
+        
+        function resendOTP() {
+            if (!otpEmail) {
+                alert('❌ Please start the password reset process again.');
+                showForgotPassword();
+                return;
+            }
+            
+            // Generate new OTP
+            currentOTP = Math.floor(100000 + Math.random() * 900000).toString();
+            
+            alert(`📧 New OTP sent to ${otpEmail}\n\n🔑 Your OTP: ${currentOTP}\n\n(In real app, this would be sent via email)`);
+        }
+    </script>
+</body>
+</html>
